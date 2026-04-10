@@ -38,10 +38,10 @@ public class WishList extends BaseEntity {
         this.product = product;
     }
 
-    public static WishList create(Member member, Product product) {
+    /*public static WishList create(Member member, Product product) {
         return WishList.builder()
                 .member(member)
                 .product(product)
                 .build();
-    }
+    }*/
 }

@@ -1,5 +1,9 @@
 package com.ecommerce.chatdemo.domain.wishlist.service;
 
+import com.ecommerce.chatdemo.domain.member.entity.Member;
+import com.ecommerce.chatdemo.domain.member.repository.MemberRepository;
+import com.ecommerce.chatdemo.domain.product.entity.Product;
+import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.domain.wishlist.dto.WishListResponse;
 import com.ecommerce.chatdemo.domain.wishlist.entity.WishList;
 import com.ecommerce.chatdemo.domain.wishlist.repository.WishListRepository;
@@ -17,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class WishListService {
 
     private final WishListRepository wishListRepository;
+    private final MemberRepository memberRepository;
+    private final ProductRepository productRepository;
 
     // 찜 목록 조회 - 본인 찜 목록만 조회
     @Transactional(readOnly = true)
@@ -27,5 +33,26 @@ public class WishListService {
         Page<WishList> wishlist = wishListRepository.findByMemberId(memberId, pageable);
 
         return wishlist.map(WishListResponse::new);
+    }
+
+    // 찜 추가
+    @Transactional
+    public WishListResponse createWishlist(Long memberId, Long productId) {
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new IllegalArgumentException("없는 유저입니다.")
+        );
+
+        Product product = productRepository.findById(productId).orElseThrow(
+                () -> new IllegalArgumentException("없는 상품입니다.")
+        );
+
+        WishList wishlist = WishList.builder()
+                .member(member)
+                .product(product)
+                .build();
+
+        wishListRepository.save(wishlist);
+
+        return new WishListResponse(wishlist);
     }
 }
