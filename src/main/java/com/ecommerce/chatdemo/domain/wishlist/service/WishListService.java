@@ -27,9 +27,9 @@ public class WishListService {
     // 찜 목록 조회 - 본인 찜 목록만 조회
     @Transactional(readOnly = true)
     public Page<WishListResponse> getWishlist(Long memberId, int page, int size) {
-
+        // 생성일 기준 내림차순으로 조회
         Pageable pageable = PageRequest.of(page-1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-
+        // 로그인한 사용자의 찜 목록만 조회
         Page<WishList> wishlist = wishListRepository.findByMemberId(memberId, pageable);
 
         return wishlist.map(WishListResponse::new);
@@ -38,8 +38,9 @@ public class WishListService {
     // 찜 추가
     @Transactional
     public WishListResponse createWishlist(Long memberId, Long productId) {
+        // 이미 추가한 상품인지 확인
         if (wishListRepository.existsByMemberIdAndProductId(memberId, productId)) {
-            throw new IllegalArgumentException("이미 찜 목록에 담긴 상품입니다.");
+            throw new IllegalArgumentException("이미 찜한 상품입니다.");
         }
 
         Member member = memberRepository.findById(memberId).orElseThrow(
@@ -54,7 +55,6 @@ public class WishListService {
                 .member(member)
                 .product(product)
                 .build();
-
         wishListRepository.save(wishlist);
 
         return new WishListResponse(wishlist);
