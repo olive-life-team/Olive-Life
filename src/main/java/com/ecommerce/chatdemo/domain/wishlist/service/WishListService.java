@@ -59,4 +59,16 @@ public class WishListService {
 
         return new WishListResponse(wishlist);
     }
+
+    // 찜 삭제
+    @Transactional
+    public void deleteWishlist(Long productId) {
+        // 해당 상품이 존재하는지 확인
+        boolean existence = wishListRepository.existsByProductId(productId);
+        if (!existence) {
+            throw new IllegalStateException("없는 상품입니다.");
+        }
+
+        wishListRepository.deleteByProductId(productId);
+    }
 }

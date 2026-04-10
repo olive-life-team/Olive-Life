@@ -1,5 +1,6 @@
 package com.ecommerce.chatdemo.domain.wishlist.controller;
 
+import com.ecommerce.chatdemo.domain.wishlist.dto.MessageResponse;
 import com.ecommerce.chatdemo.domain.wishlist.dto.WishListResponse;
 import com.ecommerce.chatdemo.domain.wishlist.service.WishListService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
@@ -44,5 +45,17 @@ public class WishListController {
             @LoginUser LoginUserInfo loginUserInfo,
             @PathVariable Long productId) {
         return ResponseEntity.ok(ApiResponse.success(wishListService.createWishlist(loginUserInfo.id(), productId)));
+    }
+
+    /**
+     * 찜 삭제
+     * @param productId
+     * @return
+     */
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<ApiResponse<MessageResponse>> deleteWishlist(
+            @PathVariable Long productId) {
+        wishListService.deleteWishlist(productId);
+        return ResponseEntity.ok(ApiResponse.success(new MessageResponse("찜한 상품이 삭제되었습니다")));
     }
 }
