@@ -1,0 +1,102 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.6'
+    id 'io.spring.dependency-management' version '1.1.6'
+}
+
+group = 'com.ecommerce'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    /*
+     * 기본 웹 API 개발용
+     */
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    /*
+     * 채팅 기능에서 WebSocket + STOMP를 사용하기 위한 의존성
+     */
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    /*
+     * 요청값 검증용
+     */
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    /*
+     * JWT 기반 인증/인가 처리용
+     */
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    /*
+     * JWT 발급/검증용
+     */
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.7'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.7'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.7'
+
+    /*
+     * JPA + MySQL 영속성 처리용
+     */
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+
+    /*
+     * Redis 사용용
+     */
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.apache.commons:commons-pool2'
+
+    /*
+     * 캐시 기능용
+     */
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    /*
+     * QueryDSL 검색 기능용
+     */
+    implementation 'io.github.openfeign.querydsl:querydsl-jpa:6.10.1'
+    annotationProcessor 'io.github.openfeign.querydsl:querydsl-apt:6.10.1:jakarta'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+    /*
+     * 헬스체크와 운영 확인용
+     */
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    /*
+     * Lombok
+     */
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    /*
+     * 테스트
+     */
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
