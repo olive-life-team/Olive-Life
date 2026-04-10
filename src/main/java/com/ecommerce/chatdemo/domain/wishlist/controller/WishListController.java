@@ -2,6 +2,7 @@ package com.ecommerce.chatdemo.domain.wishlist.controller;
 
 import com.ecommerce.chatdemo.domain.wishlist.dto.WishListResponse;
 import com.ecommerce.chatdemo.domain.wishlist.service.WishListService;
+import com.ecommerce.chatdemo.global.response.ApiResponse;
 import com.ecommerce.chatdemo.global.security.annotation.LoginUser;
 import com.ecommerce.chatdemo.global.security.dto.LoginUserInfo;
 import lombok.RequiredArgsConstructor;
@@ -28,10 +29,10 @@ public class WishListController {
      * @return
      */
     @GetMapping
-    public ResponseEntity<Page<WishListResponse>> getWishlist(
+    public ResponseEntity<ApiResponse<Page<WishListResponse>>> getWishlist(
             @LoginUser LoginUserInfo loginUserInfo,
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "10") int size) {
-        return ResponseEntity.ok(wishListService.getWishlist(loginUserInfo.id(), page, size));
+        return ResponseEntity.ok(ApiResponse.success(wishListService.getWishlist(loginUserInfo.id(), page, size)));
     }
 }
