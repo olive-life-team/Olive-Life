@@ -38,6 +38,10 @@ public class WishListService {
     // 찜 추가
     @Transactional
     public WishListResponse createWishlist(Long memberId, Long productId) {
+        if (wishListRepository.existsByMemberIdAndProductId(memberId, productId)) {
+            throw new IllegalArgumentException("이미 찜 목록에 담긴 상품입니다.");
+        }
+
         Member member = memberRepository.findById(memberId).orElseThrow(
                 () -> new IllegalArgumentException("없는 유저입니다.")
         );
