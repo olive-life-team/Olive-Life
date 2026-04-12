@@ -2,6 +2,7 @@ package com.ecommerce.chatdemo.domain.cart.service;
 
 import com.ecommerce.chatdemo.domain.cart.dto.request.CreateCartRequest;
 import com.ecommerce.chatdemo.domain.cart.dto.response.CreateCartResponse;
+import com.ecommerce.chatdemo.domain.cart.dto.response.GetCartResponse;
 import com.ecommerce.chatdemo.domain.cart.entity.Cart;
 import com.ecommerce.chatdemo.domain.cart.repository.CartRepository;
 import com.ecommerce.chatdemo.domain.cartitem.entity.CartItem;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -77,5 +79,23 @@ public class CartService {
                 product.getPrice(),
                 savedCartItem.getQuantity()
         );
+    }
+
+    public GetCartResponse getCartItems(Long memberId) {
+        // TODO: RBAC 도입시 리팩토링 필요
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new BusinessException(AuthErrorCode.USER_NOT_FOUND)
+        );
+        // Cart 조회
+        Optional<Cart> cart = cartRepository.findByMemberId(memberId);
+
+        // Cart 없으면 빈 응답 반환
+        if (cart.isEmpty()) {
+            return new GetCartResponse();
+        }
+
+        // cartItem 있는 지 확인
+        List<CartItem> cartItem = cartItemRepository.findByCart(cart.get());
+        return new GetCartResponse(cart.get(), cartItem);
     }
 }
