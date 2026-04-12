@@ -1,7 +1,9 @@
 package com.ecommerce.chatdemo.domain.product.entity;
 
 import com.ecommerce.chatdemo.domain.category.entity.Category;
+import com.ecommerce.chatdemo.domain.product.exception.ProductErrorCode;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
+import com.ecommerce.chatdemo.global.exception.BusinessException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -89,7 +91,7 @@ public class Product extends BaseEntity {
     // 재고 체크 메서드
     public void validateStock(Integer quantity) {
         if (this.stock < quantity) {
-            throw new IllegalArgumentException("재고 수량이 부족합니다.");
+            throw new BusinessException(ProductErrorCode.PRODUCT_OUT_OF_STOCK);
         }
     }
 }
