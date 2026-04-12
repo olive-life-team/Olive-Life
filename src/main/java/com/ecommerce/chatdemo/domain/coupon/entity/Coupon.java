@@ -98,6 +98,7 @@ public class Coupon extends BaseEntity {
                 .build();
     }
 
+    // TODO: 동시성 문제
     public void decreaseCouponQuantity() {
         if (this.quantity <= 0) {
             throw new CouponException(CouponErrorCode.COUPON_OUT_OF_STOCK);

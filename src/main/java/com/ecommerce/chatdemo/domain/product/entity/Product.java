@@ -8,7 +8,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 
 @Getter
 @Entity
@@ -27,11 +26,11 @@ public class Product extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, precision = 15, scale = 0)
-    private BigDecimal price;
+    @Column(nullable = false)
+    private Long price;
 
     @Column(nullable = false)
-    private Integer stock;
+    private Long stock;
 
     @Column(length = 255)
     private String description;
@@ -41,17 +40,17 @@ public class Product extends BaseEntity {
     private ProductStatus status;
 
     @Column(nullable = false)
-    private Integer views;
+    private Long views;
 
     @Builder
     private Product(
             Category category,
             String name,
-            BigDecimal price,
-            Integer stock,
+            Long price,
+            Long stock,
             String description,
             ProductStatus status,
-            Integer views
+            Long views
     ) {
         this.category = category;
         this.name = name;
@@ -65,8 +64,8 @@ public class Product extends BaseEntity {
     public static Product create(
             Category category,
             String name,
-            BigDecimal price,
-            Integer stock,
+            Long price,
+            Long stock,
             String description
     ) {
         return Product.builder()
@@ -76,14 +75,21 @@ public class Product extends BaseEntity {
                 .stock(stock)
                 .description(description)
                 .status(resolveStatus(stock))
-                .views(0)
+                .views(0L)
                 .build();
     }
 
-    private static ProductStatus resolveStatus(Integer stock) {
+    private static ProductStatus resolveStatus(Long stock) {
         if (stock == null || stock <= 0) {
             return ProductStatus.OUT_OF_STOCK;
         }
         return ProductStatus.ON_SALE;
+    }
+
+    // 재고 체크 메서드
+    public void validateStock(Integer quantity) {
+        if (this.stock < quantity) {
+            throw new IllegalArgumentException("재고 수량이 부족합니다.");
+        }
     }
 }
