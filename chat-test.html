@@ -355,8 +355,8 @@
     <div class="user-select">
       <label>사용자 선택</label>
       <select id="userSelect">
-        <option value="1">Alice</option>
-        <option value="2">Bob</option>
+        <option value="test3@test.com">user1</option>
+        <option value="test2@test.com">admin1</option>
       </select>
     </div>
 
@@ -396,8 +396,8 @@
 </div>
 
 <script>
-const API_BASE = 'http://localhost:8081';
-const WS_URL = 'http://localhost:8081/ws';
+const API_BASE = 'http://localhost:8080';
+const WS_URL = 'http://localhost:8080/ws';
 
 let stompClient = null;
 let currentUserId = null;
@@ -415,10 +415,37 @@ let typingUsers = new Set(); // ← 현재 입력 중인 사용자들
 // ─────────────────────────────────────────────────────────
 async function init() {
   // 기본 User 1로 연결
-  await selectUser(1);
+  await initChatTest('test3@test.com', 'Test1234!');
   
   // 채팅방 목록 로드
   await loadRooms();
+}
+
+async function initChatTest(email, password) {
+  // 1. 서버의 실제 로그인 엔드포인트 호출 (프런트가 없으니 여기서 강제 로그인)
+  const url = `${API_BASE}/api/auth/login`;
+  const loginResponse = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: email,
+      password: password
+    })
+  });
+
+  if (loginResponse.ok) {
+    const data = await loginResponse.json();
+    // 2. 서버가 주는 실제 JWT 토큰 저장
+    jwtToken = data.data.accessToken;
+    currentUserId = data.data.member.id;
+    currentUserName = data.data.member.name;
+    console.log("✅ 임시 로그인 성공! 토큰 확보.");
+
+    // 3. 웹소켓 연결 함수 실행
+    connectWebSocket();
+  } else {
+    console.error("❌ 로그인 실패: 서버의 로그인 로직을 확인하세요.");
+  }
 }
 
 async function selectUser(userId) {
@@ -503,7 +530,24 @@ function updateStatus(connected) {
 async function loadRooms() {
   try {
     console.log('📋 채팅방 목록 요청 중...');
-    const response = await fetch(`${API_BASE}/api/chat/rooms`);
+
+    const token = jwtToken;
+
+    if (!token) {
+      console.error('❌ 인증 토큰이 없습니다. 로그인이 필요합니다.');
+      alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/api/chat/rooms`, {
+      method: 'GET',
+      headers: {
+        // 2. [핵심] Authorization 헤더에 Bearer 토큰 주입
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
     console.log('📋 응답 상태:', response.status);
     
     if (!response.ok) {
@@ -522,6 +566,7 @@ async function loadRooms() {
 async function createRoom() {
   const input = document.getElementById('roomNameInput');
   const name = input.value.trim();
+  const token = jwtToken;
   
   if (!name) {
     alert('채팅방 이름을 입력해주세요');
@@ -530,9 +575,15 @@ async function createRoom() {
   
   try {
     console.log('🏗️ 채팅방 생성 요청:', name);
-    const response = await fetch(`${API_BASE}/api/chat/rooms?name=${encodeURIComponent(name)}`, {
-      method: 'POST'
+    const url = `${API_BASE}/api/chat/rooms?title=${encodeURIComponent(name)}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
+
     console.log('🏗️ 응답 상태:', response.status);
     
     if (!response.ok) {
@@ -556,9 +607,9 @@ async function createRoom() {
 function renderRooms() {
   const container = document.getElementById('roomList');
   container.innerHTML = rooms.map(room => `
-    <div class="room-item ${currentRoomId === room.id ? 'active' : ''}" onclick="selectRoom(${room.id}, '${room.name}')">
+    <div class="room-item ${currentRoomId === room.id ? 'active' : ''}" onclick="selectRoom(${room.id}, '${room.title}')">
       <div>
-        <h4>${room.name}</h4>
+        <h4>${room.title}</h4>
         <div class="room-id">ID: ${room.id}</div>
       </div>
     </div>
@@ -715,7 +766,7 @@ function sendMessage(event) {
   
   const message = {
     roomId: currentRoomId,
-    content: content
+    message: content
   };
   
   stompClient.send('/pub/chat.send', {}, JSON.stringify(message));
@@ -804,7 +855,7 @@ function escapeHtml(text) {
 // 사용자 변경
 // ─────────────────────────────────────────────────────────
 document.getElementById('userSelect').addEventListener('change', async function(e) {
-  const userId = parseInt(e.target.value);
+  const email = e.target.value;
   
   // 기존 구독 해제
   if (currentSubscription) {
@@ -822,7 +873,7 @@ document.getElementById('userSelect').addEventListener('change', async function(
   }
   
   // 새 사용자로 재연결
-  await selectUser(userId);
+  await initChatTest(email, 'Test1234!');
   currentRoomId = null;
   typingUsers.clear();
   clearMessages();
