@@ -361,7 +361,16 @@
     </div>
 
     <div class="room-list">
-      <h3>채팅방</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
+        <h3>채팅방</h3>
+        <div id="adminFilter" style="display: none; gap: 4px;">
+          <select id="statusFilter" onchange="handleStatusChange()" style="padding: 4px 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 4px; font-size: 11px;">
+            <option value="WAITING">대기중</option>
+            <option value="IN_PROGRESS">처리중</option>
+            <option value="COMPLETED">완료</option>
+          </select>
+        </div>
+      </div>
       <div id="roomList"></div>
     </div>
 
@@ -402,6 +411,7 @@ const WS_URL = 'http://localhost:8080/ws';
 let stompClient = null;
 let currentUserId = null;
 let currentUserName = null;
+let currentUserRole = null;
 let currentRoomId = null;
 let jwtToken = null;
 let rooms = [];
@@ -416,9 +426,6 @@ let typingUsers = new Set(); // ← 현재 입력 중인 사용자들
 async function init() {
   // 기본 User 1로 연결
   await initChatTest('test3@test.com', 'Test1234!');
-  
-  // 채팅방 목록 로드
-  await loadRooms();
 }
 
 async function initChatTest(email, password) {
@@ -439,13 +446,29 @@ async function initChatTest(email, password) {
     jwtToken = data.data.accessToken;
     currentUserId = data.data.member.id;
     currentUserName = data.data.member.name;
+    currentUserRole = data.data.member.role;
     console.log("✅ 임시 로그인 성공! 토큰 확보.");
+
+    // --- 관리자 UI 제어 추가 ---
+    const adminFilter = document.getElementById('adminFilter');
+    if (currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'CS_ADMIN') {
+      adminFilter.style.display = 'flex'; // 관리자 필터 노출
+      await loadAdminRooms('WAITING');  // 관리자는 대기중 목록 우선 로드
+    } else {
+      adminFilter.style.display = 'none';  // 고객은 필터 숨김
+      await loadRooms();                // 고객은 본인 목록 로드
+    }
 
     // 3. 웹소켓 연결 함수 실행
     connectWebSocket();
   } else {
     console.error("❌ 로그인 실패: 서버의 로그인 로직을 확인하세요.");
   }
+}
+
+async function handleStatusChange() {
+  const status = document.getElementById('statusFilter').value;
+  await loadAdminRooms(status);
 }
 
 async function selectUser(userId) {
@@ -563,6 +586,42 @@ async function loadRooms() {
   }
 }
 
+async function loadAdminRooms(status) {
+  try {
+    console.log('📋 채팅방 목록 요청 중...');
+
+    const token = jwtToken;
+
+    if (!token) {
+      console.error('❌ 인증 토큰이 없습니다. 로그인이 필요합니다.');
+      alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/api/admin/chat/rooms?status=${encodeURIComponent(status)}`, {
+      method: 'GET',
+      headers: {
+        // 2. [핵심] Authorization 헤더에 Bearer 토큰 주입
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    console.log('📋 응답 상태:', response.status);
+
+    if (!response.ok) {
+      console.error('❌ 응답 실패:', response.status, response.statusText);
+      return;
+    }
+
+    rooms = await response.json();
+    console.log('✅ 채팅방 목록 로드 완료:', rooms);
+    renderRooms();
+  } catch (error) {
+    console.error('❌ 채팅방 목록 로드 실패:', error);
+  }
+}
+
 async function createRoom() {
   const input = document.getElementById('roomNameInput');
   const name = input.value.trim();
@@ -596,7 +655,16 @@ async function createRoom() {
     console.log('✅ 채팅방 생성 완료:', room);
     
     // 목록 새로고침
-    await loadRooms();
+    // --- 관리자 UI 제어 추가 ---
+    const adminFilter = document.getElementById('adminFilter');
+    if (currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'CS_ADMIN') {
+      adminFilter.style.display = 'flex'; // 관리자 필터 노출
+      await loadAdminRooms('WAITING');  // 관리자는 대기중 목록 우선 로드
+    } else {
+      adminFilter.style.display = 'none';  // 고객은 필터 숨김
+      await loadRooms();                // 고객은 본인 목록 로드
+    }
+
     input.value = '';
   } catch (error) {
     console.error('❌ 채팅방 생성 실패:', error);
@@ -879,7 +947,16 @@ document.getElementById('userSelect').addEventListener('change', async function(
   clearMessages();
   
   // 채팅방 목록 새로고침
-  await loadRooms();
+  // 목록 새로고침
+  // --- 관리자 UI 제어 추가 ---
+  const adminFilter = document.getElementById('adminFilter');
+  if (currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'CS_ADMIN') {
+    adminFilter.style.display = 'flex'; // 관리자 필터 노출
+    await loadAdminRooms('WAITING');  // 관리자는 대기중 목록 우선 로드
+  } else {
+    adminFilter.style.display = 'none';  // 고객은 필터 숨김
+    await loadRooms();                // 고객은 본인 목록 로드
+  }
   
   document.getElementById('messageInput').disabled = true;
   document.querySelector('.chat-input-form button').disabled = true;
