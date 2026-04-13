@@ -1,6 +1,7 @@
 package com.ecommerce.chatdemo.domain.chat.controller;
 
 import com.ecommerce.chatdemo.domain.chat.dto.ChatMessageDto;
+import com.ecommerce.chatdemo.domain.chat.dto.TypingIndicatorDto;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatMessage;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatMessageType;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatRoom;
@@ -70,6 +71,18 @@ public class ChatController {
 
         // 4. Redis 발행
         publishToRedis(room.getId(), sender, dto.getMessage(), ChatMessageType.TALK);
+    }
+
+    // 입력중 표시
+    @MessageMapping("/chat.typing")
+    public void typing(TypingIndicatorDto dto, Principal principal) {
+        Member member = AuthenticatedUser.fromPrincipal(principal);
+
+        dto.setUserId(member.getId());
+        dto.setUserName(member.getName());
+
+        // 타이핑 상태를 해당 채팅방의 다른 사용자들에게 브로드캐스트
+        messagingTemplate.convertAndSend("/sub/chat/" + dto.getRoomId() + "/typing", dto);
     }
 
     // Redis 발행 로직 공통화
