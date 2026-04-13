@@ -1,10 +1,13 @@
 package com.ecommerce.chatdemo.global.exception;
 
+import com.ecommerce.chatdemo.domain.member.entity.MemberRole;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -68,7 +71,10 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.fail("AUTH_003", "접근 권한이 없습니다."));
+                .body(ApiResponse.fail(
+                        CommonErrorCode.FORBIDDEN.getCode(),
+                        CommonErrorCode.FORBIDDEN.getMessage()
+                ));
     }
 
     /**
@@ -84,7 +90,10 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.fail("AUTH_001", "인증이 필요합니다."));
+                .body(ApiResponse.fail(
+                        CommonErrorCode.UNAUTHORIZED.getCode(),
+                        CommonErrorCode.UNAUTHORIZED.getMessage()
+                ));
     }
 
     /**
@@ -101,6 +110,38 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(
                         CommonErrorCode.INTERNAL_SERVER_ERROR.getCode(),
                         CommonErrorCode.INTERNAL_SERVER_ERROR.getMessage()
+                ));
+    }
+
+    /**
+     * role 필드에 enum에 없는 값이 들어온 경우를 처리한다.
+     * 회원가입 요청에서 잘못된 role 값이 들어오면 안내 메시지를 반환한다.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        Throwable cause = e.getCause();
+
+        if (cause instanceof InvalidFormatException invalidFormatException) {
+            boolean isRoleField = invalidFormatException.getPath().stream()
+                    .anyMatch(reference -> "role".equals(reference.getFieldName()));
+
+            Class<?> targetType = invalidFormatException.getTargetType();
+
+            if (isRoleField && targetType != null && MemberRole.class.isAssignableFrom(targetType)) {
+                return ResponseEntity
+                        .status(AuthErrorCode.INVALID_ROLE_VALUE.getStatus())
+                        .body(ApiResponse.fail(
+                                AuthErrorCode.INVALID_ROLE_VALUE.getCode(),
+                                AuthErrorCode.INVALID_ROLE_VALUE.getMessage()
+                        ));
+            }
+        }
+
+        return ResponseEntity
+                .badRequest()
+                .body(ApiResponse.fail(
+                        CommonErrorCode.INVALID_INPUT_VALUE.getCode(),
+                        CommonErrorCode.INVALID_INPUT_VALUE.getMessage()
                 ));
     }
 }

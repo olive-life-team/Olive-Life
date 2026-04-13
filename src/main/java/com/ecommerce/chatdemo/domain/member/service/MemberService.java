@@ -91,7 +91,7 @@ public class MemberService {
 
     private void validateDuplicate(SignUpRequest request) {
         if (memberRepository.existsByEmail(request.email())) {
-            throw new AuthException(AuthErrorCode.DUPLICATE_EMAIL);
+            throw new AuthException(AuthErrorCode.EMAIL_ALREADY_EXISTS);
         }
     }
 
