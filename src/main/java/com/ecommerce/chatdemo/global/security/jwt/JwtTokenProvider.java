@@ -93,4 +93,10 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+
+    public long getRemainingExpiration(String token) {
+        Date expiration = parseClaims(token).getExpiration();
+        long now = System.currentTimeMillis();
+        return Math.max(0, expiration.getTime() - now);
+    }
 }

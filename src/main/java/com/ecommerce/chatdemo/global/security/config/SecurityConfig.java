@@ -1,9 +1,6 @@
 package com.ecommerce.chatdemo.global.security.config;
 
-import com.ecommerce.chatdemo.global.security.jwt.JwtAccessDeniedHandler;
-import com.ecommerce.chatdemo.global.security.jwt.JwtAuthenticationEntryPoint;
-import com.ecommerce.chatdemo.global.security.jwt.JwtAuthenticationFilter;
-import com.ecommerce.chatdemo.global.security.jwt.JwtTokenProvider;
+import com.ecommerce.chatdemo.global.security.jwt.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +21,7 @@ public class SecurityConfig {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -43,12 +41,13 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/signup",
                                 "/api/auth/login",
+                                "/api/auth/logout",
                                 "/ws/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtTokenProvider),
+                        new JwtAuthenticationFilter(jwtTokenProvider, tokenBlacklistService),
                         UsernamePasswordAuthenticationFilter.class
                 )
                 .build();

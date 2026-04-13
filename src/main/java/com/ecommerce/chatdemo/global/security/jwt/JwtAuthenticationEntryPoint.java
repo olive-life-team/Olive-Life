@@ -29,7 +29,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
                   "success": false,
                   "data": null,
                   "error": {
-                    "code": "AUTH_001",
+                    "code": "401",
                     "message": "인증이 필요합니다."
                   }
                 }

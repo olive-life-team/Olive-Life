@@ -28,7 +28,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
                   "success": false,
                   "data": null,
                   "error": {
-                    "code": "AUTH_003",
+                    "code": "403",
                     "message": "접근 권한이 없습니다."
                   }
                 }

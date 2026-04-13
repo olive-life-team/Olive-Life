@@ -1,6 +1,7 @@
 package com.ecommerce.chatdemo.global.security.jwt;
 
 import com.ecommerce.chatdemo.global.constant.AuthConstants;
+import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
 import com.ecommerce.chatdemo.global.security.dto.LoginUserInfo;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
@@ -24,6 +25,7 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
 
     /**
      * 모든 HTTP 요청 앞에서 JWT를 검사한다.
@@ -36,25 +38,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
 
         try {
-            if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-                Long userId = jwtTokenProvider.getUserId(token);
-                String role = jwtTokenProvider.getRole(token);
+            if (StringUtils.hasText(token)) {
+                if (tokenBlacklistService.isBlacklisted(token)) {
+                    request.setAttribute("errorCode", AuthErrorCode.INVALID_TOKEN);
+                } else if (jwtTokenProvider.validateToken(token)) {
+                    Long userId = jwtTokenProvider.getUserId(token);
+                    String role = jwtTokenProvider.getRole(token);
 
-                LoginUserInfo loginUserInfo = new LoginUserInfo(userId, role);
+                    LoginUserInfo loginUserInfo = new LoginUserInfo(userId, role);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                loginUserInfo,
-                                null,
-                                List.of(new SimpleGrantedAuthority(role))
-                        );
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    loginUserInfo,
+                                    null,
+                                    List.of(new SimpleGrantedAuthority(role))
+                            );
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
-        } catch (ExpiredJwtException | MalformedJwtException | UnsupportedJwtException | SignatureException e) {
-            request.setAttribute("exception", e);
+        } catch (ExpiredJwtException e) {
+            request.setAttribute("errorCode", AuthErrorCode.EXPIRED_TOKEN);
+        } catch (MalformedJwtException | UnsupportedJwtException | SignatureException | IllegalArgumentException e) {
+            request.setAttribute("errorCode", AuthErrorCode.INVALID_TOKEN);
         } catch (Exception e) {
-            request.setAttribute("exception", e);
+            request.setAttribute("errorCode", AuthErrorCode.INVALID_TOKEN);
         }
 
         filterChain.doFilter(request, response);
