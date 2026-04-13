@@ -38,7 +38,13 @@ public class ChatRoomController {
      * @return
      */
     @GetMapping
-    public ResponseEntity<List<ChatRoomResponse>> getRooms(@LoginUser LoginUserInfo loginUserInfo) {
+    public ResponseEntity<List<ChatRoomResponse>> getRooms(
+            @LoginUser LoginUserInfo loginUserInfo) {
         return ResponseEntity.ok(chatRoomService.getRooms(loginUserInfo.id()));
     }
+
+    // 메시지 내역 조회
+
+    // 채팅방 퇴실
+
 }
