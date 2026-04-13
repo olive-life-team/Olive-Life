@@ -103,7 +103,7 @@ public class CartService {
     @Transactional
     public UpdateCartItemResponse updateCartItem(Long memberId, Long cartItemId, UpdateCartItemRequest request) {
         // 해당 장바구니 상품 조회
-        CartItem cartItem = cartItemRepository.findByCartItemIdWithProduct(cartItemId).orElseThrow(
+        CartItem cartItem = cartItemRepository.findByCartItemIdWithProductAndMember(cartItemId).orElseThrow(
                 () -> new BusinessException(CartItemErrorCode.CARTITEM_NOT_FOUND)
         );
         // 본인 장바구니 맞는 지
@@ -121,5 +121,19 @@ public class CartService {
         cartItem.updateQuantity(request.getQuantity());
 
         return new UpdateCartItemResponse(cartItem);
+    }
+
+    // 장바구니 상품 삭제
+    @Transactional
+    public void deleteCartItem(Long memberId, Long cartItemId) {
+        // cartItem 조회
+        CartItem cartItem = cartItemRepository.findByCartItemWithCartAndMember(cartItemId).orElseThrow(
+                () -> new BusinessException(CartItemErrorCode.CARTITEM_NOT_FOUND)
+        );
+        // 본인 장바구니 맞는 지 확인
+        if (!cartItem.getCart().getMember().getId().equals(memberId)) {
+            throw new BusinessException(CommonErrorCode.FORBIDDEN);
+        }
+        cartItemRepository.delete(cartItem);
     }
 }
