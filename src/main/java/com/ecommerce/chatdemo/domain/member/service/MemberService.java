@@ -7,13 +7,19 @@ import com.ecommerce.chatdemo.domain.membership.entity.Membership;
 import com.ecommerce.chatdemo.domain.membership.repository.MembershipRepository;
 import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
 import com.ecommerce.chatdemo.global.exception.AuthException;
+import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import com.ecommerce.chatdemo.global.security.jwt.JwtTokenProvider;
+import com.ecommerce.chatdemo.global.security.jwt.TokenBlacklistService;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import io.jsonwebtoken.security.SignatureException;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +34,7 @@ public class MemberService {
     private final MembershipRepository membershipRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
@@ -108,5 +115,40 @@ public class MemberService {
                         DEFAULT_POINT_RATE
                 )
         );
+    }
+
+    @Transactional
+    public void logout(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            throw new AuthException(CommonErrorCode.UNAUTHORIZED);
+        }
+
+        if (!authorizationHeader.startsWith("Bearer ")) {
+            throw new AuthException(AuthErrorCode.INVALID_TOKEN);
+        }
+
+        String token = authorizationHeader.substring(7).trim();
+
+        if (token.isBlank()) {
+            throw new AuthException(AuthErrorCode.INVALID_TOKEN);
+        }
+
+        try {
+            jwtTokenProvider.validateToken(token);
+
+            Long userId = jwtTokenProvider.getUserId(token);
+
+            if (!memberRepository.existsById(userId)) {
+                throw new AuthException(AuthErrorCode.USER_NOT_FOUND);
+            }
+
+            long remainingExpiration = jwtTokenProvider.getRemainingExpiration(token);
+            tokenBlacklistService.blacklist(token, remainingExpiration);
+
+        } catch (ExpiredJwtException e) {
+            throw new AuthException(AuthErrorCode.EXPIRED_TOKEN);
+        } catch (MalformedJwtException | UnsupportedJwtException | SignatureException | IllegalArgumentException e) {
+            throw new AuthException(AuthErrorCode.INVALID_TOKEN);
+        }
     }
 }
