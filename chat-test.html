@@ -337,6 +337,26 @@
   ::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
   }
+
+  .message.system {
+    align-self: center;
+    max-width: 100%;
+    padding: 10px 0;
+  }
+  .message.system .message-bubble {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+    text-align: center;
+  }
+  /* 시스템 메시지에는 발신자나 시간을 숨김 */
+  .message.system .message-sender,
+  .message.system .message-time {
+    display: none;
+  }
+
 </style>
 </head>
 <body>
@@ -726,6 +746,13 @@ async function selectRoom(roomId, roomName) {
       const data = JSON.parse(message.body);
       handleTypingIndicator(data);
     });
+
+    const enterMessage = {
+      roomId: roomId,
+      type: "ENTER"
+    };
+
+    stompClient.send('/pub/chat.send', {}, JSON.stringify(enterMessage));
     
     console.log('✅ 채팅방', roomId, '구독 시작');
   }
@@ -860,10 +887,12 @@ function displayMessage(data) {
   }
   
   const isMe = data.senderId === currentUserId;
+  // "입장했습니다" 문구가 포함되어 있다면 시스템 스타일 적용
+  const isSystem = data.content.includes("입장했습니다");
   const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
   
   const messageDiv = document.createElement('div');
-  messageDiv.className = `message ${isMe ? 'me' : ''}`;
+  messageDiv.className = `message ${isMe ? 'me' : ''} ${isSystem ? 'system' : ''}`;
   messageDiv.innerHTML = `
     <div class="message-sender">${data.senderName}</div>
     <div class="message-bubble">${escapeHtml(data.content)}</div>
