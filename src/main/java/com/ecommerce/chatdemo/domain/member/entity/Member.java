@@ -1,6 +1,8 @@
 package com.ecommerce.chatdemo.domain.member.entity;
 
 import com.ecommerce.chatdemo.domain.membership.entity.Membership;
+import com.ecommerce.chatdemo.domain.pointtransaction.entity.exception.PointErrorCode;
+import com.ecommerce.chatdemo.domain.pointtransaction.entity.exception.PointException;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -43,8 +45,8 @@ public class Member extends BaseEntity {
     @Column(nullable = false, length = 100)
     private MemberRole role;
 
-    @Column(name = "point_balance", nullable = false, precision = 15, scale = 0)
-    private BigDecimal pointBalance;
+    @Column(name = "point_balance", nullable = false)
+    private Long pointBalance;
 
     @Builder
     private Member(
@@ -53,14 +55,14 @@ public class Member extends BaseEntity {
             String password,
             String name,
             MemberRole role,
-            BigDecimal pointBalance
+            Long pointBalance
     ) {
         this.membership = membership;
         this.email = email;
         this.password = password;
         this.name = name;
         this.role = role;
-        this.pointBalance = pointBalance == null ? BigDecimal.ZERO : pointBalance;
+        this.pointBalance = pointBalance != null ?  pointBalance : 0L;
     }
 
     public static Member create(
@@ -76,7 +78,22 @@ public class Member extends BaseEntity {
                 .password(password)
                 .name(name)
                 .role(role == null ? MemberRole.CUSTOMER : role)
-                .pointBalance(BigDecimal.ZERO)
+                .pointBalance(0L)
                 .build();
+    }
+
+    // 포인트 검증
+    public void validatePoint(Long usePoints) {
+        if (usePoints < 0) {
+            throw new PointException(PointErrorCode.INVALID_POINT);
+        }
+        if (this.pointBalance < usePoints) {
+            throw new PointException(PointErrorCode.INSUFFICIENT_POINTS);
+        }
+    }
+
+    // 포인트 차감 메서드
+    public void decreasePointBalance(Long usePoints) {
+        this.pointBalance -= usePoints;
     }
 }

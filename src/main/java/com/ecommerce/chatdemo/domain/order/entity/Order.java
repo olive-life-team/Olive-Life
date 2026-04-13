@@ -1,12 +1,18 @@
 package com.ecommerce.chatdemo.domain.order.entity;
 
 import com.ecommerce.chatdemo.domain.member.entity.Member;
+import com.ecommerce.chatdemo.domain.order.exception.OrderErrorCode;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
+import com.ecommerce.chatdemo.global.exception.BusinessException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 
 @Getter
@@ -62,23 +68,40 @@ public class Order extends BaseEntity {
         this.status = status;
     }
 
+    // 정적메서드 + 엔터티에서 null 체크함으로서 서비스에서 반복적인 로직 제거
     public static Order create(
             Member member,
             String orderNumber,
             Long totalAmount,
             Long usedPoints,
-            Long usedCouponPrice,
-            Long finalAmount
+            Long usedCouponPrice
     ) {
+        long safeUsedPoints = usedPoints != null ? usedPoints : 0L;
+        long safeUsedCouponPrice = usedCouponPrice != null ? usedCouponPrice : 0L;
+
+        // 엔터티에서 최종 결제금액을 계산 -> 믿을 수 있음
+        long finalPayAmount = totalAmount - safeUsedPoints - safeUsedCouponPrice;
+
+        if (finalPayAmount < 0) {
+            throw new BusinessException(OrderErrorCode.INVALID_FINAL_AMOUNT);
+        }
         return Order.builder()
                 .member(member)
                 .orderNumber(orderNumber)
                 .totalAmount(totalAmount)
-                .usedPoints(usedPoints)
-                .usedCouponPrice(usedCouponPrice)
-                .finalAmount(finalAmount)
+                .usedPoints(safeUsedPoints)
+                .usedCouponPrice(safeUsedCouponPrice)
+                .finalAmount(finalPayAmount)
                 .status(OrderStatus.COMPLETED)
                 .build();
+    }
+
+    // 주문번호 생성기
+    public static String generateOrderNumber() {
+        return "ORD-"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + "-"
+                + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
 }

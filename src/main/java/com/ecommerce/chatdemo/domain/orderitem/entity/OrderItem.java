@@ -31,7 +31,7 @@ public class OrderItem extends BaseEntity {
     @Column(name = "product_name", nullable = false, length = 100)
     private String productName;
 
-    @Column(name = "product_price", nullable = false, precision = 15, scale = 0)
+    @Column(name = "product_price", nullable = false)
     private Long productPrice;
 
     @Column(nullable = false)

@@ -9,6 +9,7 @@ import com.ecommerce.chatdemo.domain.cart.service.CartService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import com.ecommerce.chatdemo.global.security.annotation.LoginUser;
 import com.ecommerce.chatdemo.global.security.dto.LoginUserInfo;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class CartController {
     @PostMapping
     public ResponseEntity<ApiResponse<CreateCartResponse>> createCart(
             @LoginUser LoginUserInfo loginUserInfo,
-            @RequestBody CreateCartRequest request
+            @Valid @RequestBody CreateCartRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(cartService.createCart(loginUserInfo.id(), request)));
