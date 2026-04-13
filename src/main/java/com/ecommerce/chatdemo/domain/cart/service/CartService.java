@@ -1,11 +1,14 @@
 package com.ecommerce.chatdemo.domain.cart.service;
 
 import com.ecommerce.chatdemo.domain.cart.dto.request.CreateCartRequest;
+import com.ecommerce.chatdemo.domain.cart.dto.request.UpdateCartItemRequest;
 import com.ecommerce.chatdemo.domain.cart.dto.response.CreateCartResponse;
 import com.ecommerce.chatdemo.domain.cart.dto.response.GetCartResponse;
+import com.ecommerce.chatdemo.domain.cart.dto.response.UpdateCartItemResponse;
 import com.ecommerce.chatdemo.domain.cart.entity.Cart;
 import com.ecommerce.chatdemo.domain.cart.repository.CartRepository;
 import com.ecommerce.chatdemo.domain.cartitem.entity.CartItem;
+import com.ecommerce.chatdemo.domain.cartitem.exception.CartItemErrorCode;
 import com.ecommerce.chatdemo.domain.cartitem.repository.CartItemRepository;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.domain.member.repository.MemberRepository;
@@ -14,6 +17,7 @@ import com.ecommerce.chatdemo.domain.product.exception.ProductErrorCode;
 import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
 import com.ecommerce.chatdemo.global.exception.BusinessException;
+import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +38,6 @@ public class CartService {
     // 장바구니 상품 추가
     @Transactional
     public CreateCartResponse createCart(Long memberId, CreateCartRequest request) {
-        // TODO: RBAC 도입시 리팩토링 필요
         Member member = memberRepository.findById(memberId).orElseThrow(
                 () -> new BusinessException(AuthErrorCode.USER_NOT_FOUND)
         );
@@ -81,11 +84,8 @@ public class CartService {
         );
     }
 
+    // 장바구니 목록 조회
     public GetCartResponse getCartItems(Long memberId) {
-        // TODO: RBAC 도입시 리팩토링 필요
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new BusinessException(AuthErrorCode.USER_NOT_FOUND)
-        );
         // Cart 조회
         Optional<Cart> cart = cartRepository.findByMemberId(memberId);
 
@@ -95,7 +95,31 @@ public class CartService {
         }
 
         // cartItem 있는 지 확인
-        List<CartItem> cartItem = cartItemRepository.findByCart(cart.get());
-        return new GetCartResponse(cart.get(), cartItem);
+        List<CartItem> cartItems = cartItemRepository.findByCartWithProduct(cart.get());
+        return new GetCartResponse(cart.get(), cartItems);
+    }
+
+    // 장바구니 상품 수량 수정
+    @Transactional
+    public UpdateCartItemResponse updateCartItem(Long memberId, Long cartItemId, UpdateCartItemRequest request) {
+        // 해당 장바구니 상품 조회
+        CartItem cartItem = cartItemRepository.findByCartItemIdWithProduct(cartItemId).orElseThrow(
+                () -> new BusinessException(CartItemErrorCode.CARTITEM_NOT_FOUND)
+        );
+        // 본인 장바구니 맞는 지
+        if (!cartItem.getCart().getMember().getId().equals(memberId)) {
+            throw new BusinessException(CommonErrorCode.FORBIDDEN);
+        }
+        // 변경하려는 수량이 0 이하면 에러
+        if (request.getQuantity() <= 0) {
+            throw new BusinessException(CartItemErrorCode.INVALID_QUANTITY);
+        }
+        // 재고 체크
+        cartItem.getProduct().validateStock(request.getQuantity());
+
+        // 수량 업데이트
+        cartItem.updateQuantity(request.getQuantity());
+
+        return new UpdateCartItemResponse(cartItem);
     }
 }
