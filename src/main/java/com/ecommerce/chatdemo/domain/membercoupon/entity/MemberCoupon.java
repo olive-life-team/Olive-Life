@@ -2,8 +2,12 @@ package com.ecommerce.chatdemo.domain.membercoupon.entity;
 
 import com.ecommerce.chatdemo.domain.coupon.entity.Coupon;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
+import com.ecommerce.chatdemo.domain.membercoupon.exception.MemberCouponErrorCode;
+import com.ecommerce.chatdemo.domain.membercoupon.exception.MemberCouponException;
 import com.ecommerce.chatdemo.domain.order.entity.Order;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
+import com.ecommerce.chatdemo.global.exception.BusinessException;
+import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -41,6 +45,9 @@ public class MemberCoupon extends BaseEntity {
     @Column(name = "issued_at")
     private LocalDateTime issuedAt;
 
+    @Column(name = "expired_at")
+    private LocalDateTime expiredAt;
+
     @Column(name = "used_at")
     private LocalDateTime usedAt;
 
@@ -51,6 +58,7 @@ public class MemberCoupon extends BaseEntity {
             Order order,
             MemberCouponStatus status,
             LocalDateTime issuedAt,
+            LocalDateTime expiredAt,
             LocalDateTime usedAt
     ) {
         this.member = member;
@@ -58,6 +66,7 @@ public class MemberCoupon extends BaseEntity {
         this.order = order;
         this.status = status;
         this.issuedAt = issuedAt;
+        this.expiredAt = expiredAt;
         this.usedAt = usedAt;
     }
 
@@ -67,6 +76,27 @@ public class MemberCoupon extends BaseEntity {
                 .coupon(coupon)
                 .status(MemberCouponStatus.AVAILABLE)
                 .issuedAt(LocalDateTime.now())
+                .expiredAt(coupon.getUseEndAt())
                 .build();
+    }
+
+    // 쿠폰 유효성 검증 메서드
+    public void validateCoupon(Long memberId) {
+        if (!this.member.getId().equals(memberId)) {
+            throw new BusinessException(CommonErrorCode.FORBIDDEN);
+        }
+        if (this.status.equals(MemberCouponStatus.USED)) {
+            throw new MemberCouponException(MemberCouponErrorCode.ALREADY_USED_COUPON);
+        }
+        if (LocalDateTime.now().isAfter(expiredAt)) {
+            throw new MemberCouponException(MemberCouponErrorCode.EXPIRED_COUPON_DATETIME);
+        }
+    }
+
+    // 쿠폰 사용 메서드
+    public void useCoupon(Order order) {
+        this.order = order;
+        this.status = MemberCouponStatus.USED;
+        this.usedAt = LocalDateTime.now();
     }
 }

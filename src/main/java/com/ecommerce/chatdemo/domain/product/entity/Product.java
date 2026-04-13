@@ -2,6 +2,7 @@ package com.ecommerce.chatdemo.domain.product.entity;
 
 import com.ecommerce.chatdemo.domain.category.entity.Category;
 import com.ecommerce.chatdemo.domain.product.exception.ProductErrorCode;
+import com.ecommerce.chatdemo.domain.product.exception.ProductException;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
 import com.ecommerce.chatdemo.global.exception.BusinessException;
 import jakarta.persistence.*;
@@ -93,5 +94,10 @@ public class Product extends BaseEntity {
         if (this.stock < quantity) {
             throw new BusinessException(ProductErrorCode.PRODUCT_OUT_OF_STOCK);
         }
+    }
+
+    // 재고 차감 메서드
+    public void decreaseStock(Integer quantity) {
+        this.stock -= quantity;
     }
 }
