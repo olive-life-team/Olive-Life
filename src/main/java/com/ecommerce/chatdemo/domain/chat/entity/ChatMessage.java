@@ -1,6 +1,5 @@
-package com.ecommerce.chatdemo.domain.chatmessage.entity;
+package com.ecommerce.chatdemo.domain.chat.entity;
 
-import com.ecommerce.chatdemo.domain.chatroom.entity.ChatRoom;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -40,6 +39,7 @@ public class ChatMessage extends BaseEntity {
             Member sender,
             String message,
             ChatMessageType messageType
+
     ) {
         this.room = room;
         this.sender = sender;
@@ -47,7 +47,7 @@ public class ChatMessage extends BaseEntity {
         this.messageType = messageType;
     }
 
-    public static ChatMessage create(
+    /*public static ChatMessage create(
             ChatRoom room,
             Member sender,
             String message,
@@ -59,5 +59,5 @@ public class ChatMessage extends BaseEntity {
                 .message(message)
                 .messageType(messageType)
                 .build();
-    }
+    }*/
 }

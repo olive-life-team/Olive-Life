@@ -1,4 +1,4 @@
-package com.ecommerce.chatdemo.domain.chatroom.entity;
+package com.ecommerce.chatdemo.domain.chat.entity;
 
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
@@ -18,6 +18,8 @@ public class ChatRoom extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String title;
+
     @JoinColumn(name = "member_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
     private Member member;
@@ -31,16 +33,16 @@ public class ChatRoom extends BaseEntity {
     private ChatRoomStatus status;
 
     @Builder
-    private ChatRoom(Member member, Member admin, ChatRoomStatus status) {
+    private ChatRoom(String title, Member member) {
+        this.title = title;
         this.member = member;
-        this.admin = admin;
-        this.status = status;
+        this.status = ChatRoomStatus.WAITING;
     }
 
-    public static ChatRoom create(Member member) {
+    /*public static ChatRoom create(Member member) {
         return ChatRoom.builder()
                 .member(member)
                 .status(ChatRoomStatus.WAITING)
                 .build();
-    }
+    }*/
 }
