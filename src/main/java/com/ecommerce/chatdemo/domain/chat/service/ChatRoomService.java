@@ -9,6 +9,8 @@ import com.ecommerce.chatdemo.domain.chat.repository.ChatMessageRepository;
 import com.ecommerce.chatdemo.domain.chat.repository.ChatRoomRepository;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.domain.member.repository.MemberRepository;
+import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
+import com.ecommerce.chatdemo.global.exception.AuthException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +33,7 @@ public class ChatRoomService {
     @Transactional
     public CreateChatRoomResponse createRoom(String title, Long memberId) {
         Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new IllegalArgumentException("없는 유저입니다.")
+                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
         );
 
        ChatRoom chatRoom = ChatRoom.builder()

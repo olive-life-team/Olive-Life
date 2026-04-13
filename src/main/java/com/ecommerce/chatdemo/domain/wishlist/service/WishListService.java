@@ -3,10 +3,16 @@ package com.ecommerce.chatdemo.domain.wishlist.service;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.domain.member.repository.MemberRepository;
 import com.ecommerce.chatdemo.domain.product.entity.Product;
+import com.ecommerce.chatdemo.domain.product.exception.ProductErrorCode;
+import com.ecommerce.chatdemo.domain.product.exception.ProductException;
 import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.domain.wishlist.dto.WishListResponse;
 import com.ecommerce.chatdemo.domain.wishlist.entity.WishList;
+import com.ecommerce.chatdemo.domain.wishlist.exception.WishListErrorCode;
+import com.ecommerce.chatdemo.domain.wishlist.exception.WishListException;
 import com.ecommerce.chatdemo.domain.wishlist.repository.WishListRepository;
+import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
+import com.ecommerce.chatdemo.global.exception.AuthException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -40,15 +46,15 @@ public class WishListService {
     public WishListResponse createWishlist(Long memberId, Long productId) {
         // 이미 추가한 상품인지 확인
         if (wishListRepository.existsByMemberIdAndProductId(memberId, productId)) {
-            throw new IllegalArgumentException("이미 찜한 상품입니다.");
+            throw new WishListException(WishListErrorCode.WISHLIST_ALREADY_EXISTS);
         }
 
         Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new IllegalArgumentException("없는 유저입니다.")
+                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
         );
 
         Product product = productRepository.findById(productId).orElseThrow(
-                () -> new IllegalArgumentException("없는 상품입니다.")
+                () -> new ProductException(ProductErrorCode.PRODUCT_NOT_FOUND)
         );
 
         WishList wishlist = WishList.builder()
@@ -66,7 +72,7 @@ public class WishListService {
         // 해당 상품이 존재하는지 확인
         boolean existence = wishListRepository.existsByProductId(productId);
         if (!existence) {
-            throw new IllegalStateException("없는 상품입니다.");
+            throw new ProductException(ProductErrorCode.PRODUCT_NOT_FOUND);
         }
 
         wishListRepository.deleteByProductId(productId);
