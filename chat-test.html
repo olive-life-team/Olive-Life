@@ -436,7 +436,7 @@ async function initChatTest(email, password) {
   if (loginResponse.ok) {
     const data = await loginResponse.json();
     // 2. 서버가 주는 실제 JWT 토큰 저장
-    jwtToken = data.accessToken;
+    jwtToken = data.data.accessToken;
     currentUserId = data.data.member.id;
     currentUserName = data.data.member.name;
     console.log("✅ 임시 로그인 성공! 토큰 확보.");
@@ -530,7 +530,24 @@ function updateStatus(connected) {
 async function loadRooms() {
   try {
     console.log('📋 채팅방 목록 요청 중...');
-    const response = await fetch(`${API_BASE}/api/chat/rooms`);
+
+    const token = jwtToken;
+
+    if (!token) {
+      console.error('❌ 인증 토큰이 없습니다. 로그인이 필요합니다.');
+      alert('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+      return;
+    }
+
+    const response = await fetch(`${API_BASE}/api/chat/rooms`, {
+      method: 'GET',
+      headers: {
+        // 2. [핵심] Authorization 헤더에 Bearer 토큰 주입
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
     console.log('📋 응답 상태:', response.status);
     
     if (!response.ok) {
@@ -549,6 +566,7 @@ async function loadRooms() {
 async function createRoom() {
   const input = document.getElementById('roomNameInput');
   const name = input.value.trim();
+  const token = jwtToken;
   
   if (!name) {
     alert('채팅방 이름을 입력해주세요');
@@ -557,9 +575,15 @@ async function createRoom() {
   
   try {
     console.log('🏗️ 채팅방 생성 요청:', name);
-    const response = await fetch(`${API_BASE}/api/chat/rooms?name=${encodeURIComponent(name)}`, {
-      method: 'POST'
+    const url = `${API_BASE}/api/chat/rooms?title=${encodeURIComponent(name)}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     });
+
     console.log('🏗️ 응답 상태:', response.status);
     
     if (!response.ok) {
@@ -583,9 +607,9 @@ async function createRoom() {
 function renderRooms() {
   const container = document.getElementById('roomList');
   container.innerHTML = rooms.map(room => `
-    <div class="room-item ${currentRoomId === room.id ? 'active' : ''}" onclick="selectRoom(${room.id}, '${room.name}')">
+    <div class="room-item ${currentRoomId === room.id ? 'active' : ''}" onclick="selectRoom(${room.id}, '${room.title}')">
       <div>
-        <h4>${room.name}</h4>
+        <h4>${room.title}</h4>
         <div class="room-id">ID: ${room.id}</div>
       </div>
     </div>
@@ -742,7 +766,7 @@ function sendMessage(event) {
   
   const message = {
     roomId: currentRoomId,
-    content: content
+    message: content
   };
   
   stompClient.send('/pub/chat.send', {}, JSON.stringify(message));

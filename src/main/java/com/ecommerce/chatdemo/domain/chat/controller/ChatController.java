@@ -65,7 +65,7 @@ public class ChatController {
                 .room(room)
                 .sender(sender)
                 .message(dto.getMessage())
-                .messageType(dto.getType())
+                .messageType(ChatMessageType.TALK)
                 .build();
         chatMessageRepository.save(message);
 
