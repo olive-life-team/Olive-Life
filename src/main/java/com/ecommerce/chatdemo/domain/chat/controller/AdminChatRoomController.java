@@ -19,7 +19,11 @@ public class AdminChatRoomController {
 
     private final AdminChatRoomService adminChatRoomService;
 
-    // 채팅방 목록 조회
+    /**
+     * 채팅방 목록 조회
+     * @param status
+     * @return
+     */
     @GetMapping
     public ResponseEntity<List<ChatRoomResponse>> getRooms(
             @RequestParam(required = false) ChatRoomStatus status) {

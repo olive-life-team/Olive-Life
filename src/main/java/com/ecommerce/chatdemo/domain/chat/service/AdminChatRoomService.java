@@ -15,6 +15,7 @@ public class AdminChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
 
+    // 채팅방 상태별 목록 조회 (관리자)
     @Transactional(readOnly = true)
     public List<ChatRoomResponse> getRooms(ChatRoomStatus status) {
         return chatRoomRepository.findAllByStatus(status)
