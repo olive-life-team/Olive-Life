@@ -34,15 +34,6 @@ public class ChatController {
         // 1. 사용자 정보 로드 (매번 DB 조회보다 Principal 캐싱 권장)
         Member sender = AuthenticatedUser.fromPrincipal(principal);
 
-        /**
-         * 프론트엔드에서 웹소켓 연결 및 구독(subscribe) 직후에 type을 ENTER로 설정한 JSON 메시지를 한 번 쏴줘야 합니다.
-         *
-         * 동작 흐름:
-         * 1.  사용자가 채팅방 입장 클릭
-         * 2.  JS에서 웹소켓 연결 및 /sub/chat/{roomId} 구독
-         * 3.  [중요] JS에서 stomp.send("/pub/chat.send", {}, JSON.stringify({type: 'ENTER', roomId: 1, ...})) 호출
-         * 4.  그제야 위 코드가 실행되며 "○○님이 입장했습니다"가 저장 및 발송됨
-         */
         // 2. 입장 로직 처리
         if (ChatMessageType.ENTER.equals(dto.getType())) {
             // 세션에 정보 저장 (퇴장 시 사용)
@@ -50,10 +41,10 @@ public class ChatController {
             headerAccessor.getSessionAttributes().put("userId", sender.getId());
             headerAccessor.getSessionAttributes().put("userName", sender.getName());
 
-            dto.setMessage(sender.getName() + "님이 입장했습니다.");
+            dto.setContent(sender.getName() + "님이 입장했습니다.");
 
             // 입장 메시지는 DB에 저장하지 않고 바로 Redis로 발행 후 메서드 종료
-            publishToRedis(dto.getRoomId(), sender, dto.getMessage(), ChatMessageType.ENTER);
+            publishToRedis(dto.getRoomId(), sender, dto.getContent(), ChatMessageType.ENTER);
             return;
         }
 
@@ -64,13 +55,13 @@ public class ChatController {
         ChatMessage message = ChatMessage.builder()
                 .room(room)
                 .sender(sender)
-                .message(dto.getMessage())
+                .content(dto.getContent())
                 .messageType(ChatMessageType.TALK)
                 .build();
         chatMessageRepository.save(message);
 
         // 4. Redis 발행
-        publishToRedis(room.getId(), sender, dto.getMessage(), ChatMessageType.TALK);
+        publishToRedis(room.getId(), sender, dto.getContent(), ChatMessageType.TALK);
     }
 
     // 입력중 표시
