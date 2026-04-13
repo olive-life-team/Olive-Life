@@ -1,0 +1,17 @@
+package com.ecommerce.chatdemo.domain.order.exception;
+
+import com.ecommerce.chatdemo.global.exception.ErrorCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@RequiredArgsConstructor
+public enum OrderErrorCode implements ErrorCode {
+
+    INVALID_FINAL_AMOUNT(HttpStatus.BAD_REQUEST, "ORDER_001", "최종 결제금액은 0보다 작을 수 없습니다.");
+
+    private final HttpStatus status;
+    private final String code;
+    private final String message;
+}

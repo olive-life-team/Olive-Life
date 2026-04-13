@@ -7,7 +7,7 @@ public record MyInfoResponse(
         String email,
         String name,
         String role,
-        BigDecimal pointBalance,
+        Long pointBalance,
         String membershipName
 ) {
 }
