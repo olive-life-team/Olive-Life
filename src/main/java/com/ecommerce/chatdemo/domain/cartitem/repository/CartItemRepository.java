@@ -20,7 +20,19 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<CartItem> findByCartWithProduct(Cart cart);
 
     // N+1 방지
-    // cartItemId로 해당 상품 조회
-    @Query("SELECT ci FROM CartItem ci JOIN FETCH ci.product WHERE ci.id = :cartItemId")
-    Optional<CartItem> findByCartItemIdWithProduct(@Param("cartItemId") Long cartItemId);
+    // cartItemId로 해당 장바구니 + 사용자 + 상품 한 번에 조회 (Cart + member + product)
+    @Query("SELECT ci FROM CartItem ci " +
+            "JOIN FETCH ci.cart c " +
+            "JOIN FETCH c.member " +
+            "JOIN FETCH ci.product " +
+            "WHERE ci.id = :cartItemId")
+    Optional<CartItem> findByCartItemIdWithProductAndMember(@Param("cartItemId") Long cartItemId);
+
+    // N+1 방지
+    // CartItemId로 장바구니 + 사용자 조회 (Cart + member)
+    @Query("SELECT ci FROM CartItem ci " +
+            "JOIN FETCH ci.cart c " +
+            "JOIN FETCH c.member " +
+            "WHERE ci.id = :cartItemId")
+    Optional<CartItem> findByCartItemWithCartAndMember(@Param("cartItemId") Long cartItemId);
 }

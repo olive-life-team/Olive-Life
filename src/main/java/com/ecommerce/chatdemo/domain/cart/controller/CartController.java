@@ -14,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.Path;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/cart/items")
@@ -47,5 +49,15 @@ public class CartController {
             @RequestBody UpdateCartItemRequest request
     ) {
         return ResponseEntity.ok(ApiResponse.success(cartService.updateCartItem(loginUserInfo.id(), cartItemId,request)));
+    }
+
+    // 장바구니 상품 삭제
+    @DeleteMapping("/{cartItemId}")
+    public ResponseEntity<ApiResponse<Void>> deleteCartItem(
+            @LoginUser LoginUserInfo loginUserInfo,
+            @PathVariable Long cartItemId
+    ) {
+        cartService.deleteCartItem(loginUserInfo.id(), cartItemId);
+        return ResponseEntity.noContent().build();
     }
 }
