@@ -9,7 +9,8 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum OrderErrorCode implements ErrorCode {
 
-    INVALID_FINAL_AMOUNT(HttpStatus.BAD_REQUEST, "ORDER_001", "최종 결제금액은 0보다 작을 수 없습니다.");
+    INVALID_FINAL_AMOUNT(HttpStatus.BAD_REQUEST, "ORDER_001", "최종 결제금액은 0보다 작을 수 없습니다."),
+    EXCEED_POINT_USAGE(HttpStatus.BAD_REQUEST, "ORDER_002", "포인트 사용금액이 주문 금액을 초과할 수 없습니다.");
 
     private final HttpStatus status;
     private final String code;

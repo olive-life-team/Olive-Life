@@ -1,7 +1,8 @@
 package com.ecommerce.chatdemo.domain.order.controller;
 
+import com.ecommerce.chatdemo.domain.order.dto.request.CreateOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.DirectOrderRequest;
-import com.ecommerce.chatdemo.domain.order.dto.response.DirectOrderResponse;
+import com.ecommerce.chatdemo.domain.order.dto.response.CreateOrderResponse;
 import com.ecommerce.chatdemo.domain.order.service.OrderService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import com.ecommerce.chatdemo.global.security.annotation.LoginUser;
@@ -23,11 +24,21 @@ public class OrderController {
 
     // 즉시 결제(장바구니X)
     @PostMapping("/direct")
-    public ResponseEntity<ApiResponse<DirectOrderResponse>> createDirectOrder(
+    public ResponseEntity<ApiResponse<CreateOrderResponse>> createDirectOrder(
             @LoginUser LoginUserInfo loginUserInfo,
             @RequestBody DirectOrderRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(orderService.createDirectOrder(loginUserInfo.id(), request)));
+    }
+
+    // 주문 생성(장바구니 구매)
+    @PostMapping
+    public ResponseEntity<ApiResponse<CreateOrderResponse>> createOrder(
+            @LoginUser LoginUserInfo loginUserInfo,
+            @RequestBody CreateOrderRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(orderService.createOrder(loginUserInfo.id(), request)));
     }
 }
