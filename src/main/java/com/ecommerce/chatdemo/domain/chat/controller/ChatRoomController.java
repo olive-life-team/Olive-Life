@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -65,6 +66,17 @@ public class ChatRoomController {
                 chatRoomService.getMessages(roomId, cursor, size)));
     }
 
-    // 채팅방 퇴실
-
+    /**
+     * 채팅방 퇴실
+     * @param roomId
+     * @param loginUserInfo
+     * @return
+     */
+    @PatchMapping("/{roomId}/leave")
+    public ResponseEntity<ApiResponse<Void>> leaveChatRoom(
+            @PathVariable Long roomId,
+            @LoginUser LoginUserInfo loginUserInfo) {
+        chatRoomService.leaveChatRoom(roomId, loginUserInfo.id());
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
 }

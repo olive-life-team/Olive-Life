@@ -361,7 +361,12 @@
   .message.system .message-time {
     display: none;
   }
-
+  #leaveBtn:hover {
+    filter: brightness(0.9);
+  }
+  #leaveBtn:active {
+    transform: scale(0.98);
+  }
 </style>
 </head>
 <body>
@@ -407,9 +412,14 @@
 
   <!-- ════════ CHAT AREA ════════ -->
   <div class="chat-area">
-    <div class="chat-header">
-      <h2 id="chatTitle">채팅방을 선택해주세요</h2>
-      <p id="chatSubtitle">왼쪽에서 채팅방을 선택하거나 새로 만들어보세요</p>
+    <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2 id="chatTitle">채팅방을 선택해주세요</h2>
+        <p id="chatSubtitle">왼쪽에서 채팅방을 선택하거나 새로 만들어보세요</p>
+      </div>
+      <button id="leaveBtn" onclick="leaveRoom()" style="display: none; padding: 8px 16px; background: var(--red); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
+        퇴실하기
+      </button>
     </div>
 
     <div class="chat-messages" id="chatMessages">
@@ -768,6 +778,7 @@ async function selectRoom(roomId, roomName) {
   document.getElementById('chatSubtitle').textContent = `Room ID: ${roomId}`;
   document.getElementById('messageInput').disabled = false;
   document.querySelector('.chat-input-form button').disabled = false;
+  document.getElementById('leaveBtn').style.display = 'block';
   
   renderRooms();
   clearMessages();
@@ -798,6 +809,52 @@ async function selectRoom(roomId, roomName) {
     stompClient.send('/pub/chat.send', {}, JSON.stringify(enterMessage));
     
     console.log('✅ 채팅방', roomId, '구독 시작');
+  }
+}
+
+// 채팅방 퇴실 함수
+async function leaveRoom() {
+  if (!currentRoomId) return;
+
+  if (!confirm('정말 이 채팅방에서 퇴실하시겠습니까?')) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/chat/rooms/${currentRoomId}/leave`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${jwtToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      alert('퇴실 처리가 완료되었습니다.');
+
+      // 1. 상태 초기화
+      currentRoomId = null;
+
+      // 2. UI 초기화
+      document.getElementById('chatTitle').textContent = '채팅방을 선택해주세요';
+      document.getElementById('chatSubtitle').textContent = '왼쪽에서 채팅방을 선택하거나 새로 만들어보세요';
+      document.getElementById('leaveBtn').style.display = 'none';
+      document.getElementById('messageInput').disabled = true;
+      document.querySelector('.chat-input-form button').disabled = true;
+      clearMessages();
+
+      // 3. 목록 새로고침
+      if (currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'CS_ADMIN') {
+        const status = document.getElementById('statusFilter').value;
+        await loadAdminRooms(status);
+      } else {
+        await loadRooms();
+      }
+    } else {
+      const result = await response.json();
+      alert(result.message || '퇴실 처리에 실패했습니다.');
+    }
+  } catch (error) {
+    console.error('❌ 퇴실 요청 에러:', error);
+    alert('오류가 발생했습니다.');
   }
 }
 
@@ -923,7 +980,10 @@ async function loadPastMessages(roomId, isInitial = true) {
 
 function createMessageElement(data) {
   const isMe = data.senderId === currentUserId;
-  const isSystem = data.content && data.content.includes("입장했습니다");
+  const isSystem = data.content &&
+          (data.content.includes("입장했습니다") ||
+                  data.content.includes("퇴장했습니다") ||
+                  data.content.includes("퇴실 처리되었습니다"));
   const time = data.createdAt ? new Date(data.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '오후 00:00';
 
   const messageDiv = document.createElement('div');
@@ -980,8 +1040,10 @@ function displayMessage(data) {
   }
   
   const isMe = data.senderId === currentUserId;
-  // "입장했습니다" 문구가 포함되어 있다면 시스템 스타일 적용
-  const isSystem = data.content.includes("입장했습니다");
+  const isSystem = data.content &&
+          (data.content.includes("입장했습니다") ||
+                  data.content.includes("퇴장했습니다") ||
+                  data.content.includes("퇴실 처리되었습니다"));
   const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
   
   const messageDiv = document.createElement('div');
