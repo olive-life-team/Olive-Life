@@ -404,7 +404,7 @@
       <div id="roomList"></div>
     </div>
 
-    <div class="create-room">
+    <div class="create-room" id="create-room">
       <input type="text" id="roomNameInput" placeholder="새 채팅방 이름..."/>
       <button onclick="createRoom()">채팅방 생성</button>
     </div>
@@ -489,9 +489,11 @@ async function initChatTest(email, password) {
     if (currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'CS_ADMIN') {
       adminFilter.style.display = 'flex'; // 관리자 필터 노출
       await loadAdminRooms('WAITING');  // 관리자는 대기중 목록 우선 로드
+      document.getElementById('create-room').style.display = 'none';
     } else {
       adminFilter.style.display = 'none';  // 고객은 필터 숨김
       await loadRooms();                // 고객은 본인 목록 로드
+      document.getElementById('create-room').style.display = 'block';
     }
 
     // 3. 웹소켓 연결 함수 실행
@@ -722,9 +724,11 @@ async function createRoom() {
     if (currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'CS_ADMIN') {
       adminFilter.style.display = 'flex'; // 관리자 필터 노출
       await loadAdminRooms('WAITING');  // 관리자는 대기중 목록 우선 로드
+      document.getElementById('create-room').style.display = 'none';
     } else {
       adminFilter.style.display = 'none';  // 고객은 필터 숨김
       await loadRooms();                // 고객은 본인 목록 로드
+      document.getElementById('create-room').style.display = 'block';
     }
 
     input.value = '';
@@ -746,7 +750,7 @@ function renderRooms() {
   }
 
   container.innerHTML = rooms.map(room => `
-    <div class="room-item ${currentRoomId === room.id ? 'active' : ''}" onclick="selectRoom(${room.id}, '${room.title}')">
+    <div class="room-item ${currentRoomId === room.id ? 'active' : ''}" onclick="selectRoom(${room.id}, '${room.title}', '${room.status}')">
       <div>
         <h4>${room.title}</h4>
         <div class="room-id">ID: ${room.id}</div>
@@ -755,7 +759,7 @@ function renderRooms() {
   `).join('');
 }
 
-async function selectRoom(roomId, roomName) {
+async function selectRoom(roomId, roomName, status) {
   // 기존 구독 해제
   if (currentSubscription) {
     console.log('🔴 기존 구독 해제:', currentRoomId);
@@ -776,10 +780,16 @@ async function selectRoom(roomId, roomName) {
   // UI 업데이트
   document.getElementById('chatTitle').textContent = roomName;
   document.getElementById('chatSubtitle').textContent = `Room ID: ${roomId}`;
-  document.getElementById('messageInput').disabled = false;
-  document.querySelector('.chat-input-form button').disabled = false;
-  document.getElementById('leaveBtn').style.display = 'block';
-  
+  if (status !== 'COMPLETED') {
+    document.getElementById('messageInput').disabled = false;
+    document.querySelector('.chat-input-form button').disabled = false;
+    document.getElementById('leaveBtn').style.display = 'block';
+  } else {
+    document.getElementById('messageInput').disabled = true;
+    document.querySelector('.chat-input-form button').disabled = true;
+    document.getElementById('leaveBtn').style.display = 'none';
+  }
+
   renderRooms();
   clearMessages();
   
@@ -842,12 +852,11 @@ async function leaveRoom() {
       clearMessages();
 
       // 3. 목록 새로고침
-      if (currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'CS_ADMIN') {
-        const status = document.getElementById('statusFilter').value;
-        await loadAdminRooms(status);
-      } else {
-        await loadRooms();
-      }
+      const result = await response.json();
+      const status = result.data.status;
+      await loadAdminRooms(status);
+      await loadRooms();
+
     } else {
       const result = await response.json();
       alert(result.message || '퇴실 처리에 실패했습니다.');
@@ -933,7 +942,7 @@ async function loadPastMessages(roomId, isInitial = true) {
     isLoadingMessages = true;
 
     // 1. URL 구성: 커서가 존재하면 쿼리 파라미터 추가
-    let url = `${API_BASE}/api/chat/rooms/${roomId}/messages?size=10`;
+    let url = `${API_BASE}/api/chat/rooms/${roomId}/messages?size=20`;
     if (!isInitial && lastMessageId) {
       url += `&cursor=${lastMessageId}`;
     }
@@ -983,7 +992,7 @@ function createMessageElement(data) {
   const isSystem = data.content &&
           (data.content.includes("입장했습니다") ||
                   data.content.includes("퇴장했습니다") ||
-                  data.content.includes("퇴실 처리되었습니다"));
+                  data.content.includes("끊겼습니다"));
   const time = data.createdAt ? new Date(data.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '오후 00:00';
 
   const messageDiv = document.createElement('div');
@@ -1043,7 +1052,7 @@ function displayMessage(data) {
   const isSystem = data.content &&
           (data.content.includes("입장했습니다") ||
                   data.content.includes("퇴장했습니다") ||
-                  data.content.includes("퇴실 처리되었습니다"));
+                  data.content.includes("끊겼습니다"));
   const time = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
   
   const messageDiv = document.createElement('div');
@@ -1137,9 +1146,11 @@ document.getElementById('userSelect').addEventListener('change', async function(
   if (currentUserRole === 'SUPER_ADMIN' || currentUserRole === 'CS_ADMIN') {
     adminFilter.style.display = 'flex'; // 관리자 필터 노출
     await loadAdminRooms('WAITING');  // 관리자는 대기중 목록 우선 로드
+    document.getElementById('create-room').style.display = 'none';
   } else {
     adminFilter.style.display = 'none';  // 고객은 필터 숨김
     await loadRooms();                // 고객은 본인 목록 로드
+    document.getElementById('create-room').style.display = 'block';
   }
   
   document.getElementById('messageInput').disabled = true;

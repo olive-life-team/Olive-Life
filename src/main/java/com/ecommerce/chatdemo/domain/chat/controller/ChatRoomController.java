@@ -73,10 +73,9 @@ public class ChatRoomController {
      * @return
      */
     @PatchMapping("/{roomId}/leave")
-    public ResponseEntity<ApiResponse<Void>> leaveChatRoom(
+    public ResponseEntity<ApiResponse<ChatRoomResponse>> leaveChatRoom(
             @PathVariable Long roomId,
             @LoginUser LoginUserInfo loginUserInfo) {
-        chatRoomService.leaveChatRoom(roomId, loginUserInfo.id());
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ResponseEntity.ok(ApiResponse.success(chatRoomService.leaveChatRoom(roomId, loginUserInfo.id())));
     }
 }

@@ -5,6 +5,7 @@ import com.ecommerce.chatdemo.domain.chat.dto.TypingIndicatorDto;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatMessage;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatMessageType;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatRoom;
+import com.ecommerce.chatdemo.domain.chat.entity.ChatRoomStatus;
 import com.ecommerce.chatdemo.domain.chat.exception.ChatErrorCode;
 import com.ecommerce.chatdemo.domain.chat.exception.ChatException;
 import com.ecommerce.chatdemo.domain.chat.repository.ChatMessageRepository;
@@ -45,11 +46,15 @@ public class ChatController {
 
             dto.setContent(sender.getName() + "님이 입장했습니다.");
 
-            // admin 입장시 ChatRoom updateAdmin
+            // admin 입장시 ChatRoom updateAdmin, updateStatus
             if ("CS_ADMIN".equals(sender.getRole().toString()) || "SUPER_ADMIN".equals(sender.getRole().toString())) {
                 ChatRoom room = chatRoomRepository.findById(dto.getRoomId())
                         .orElseThrow(() -> new ChatException(ChatErrorCode.CHATROOM_NOT_FOUND));
-                room.updateAdmin(sender);
+                if ("WAITING".equals(room.getStatus().toString())) {
+                    room.updateAdmin(sender);
+                    room.updateStatus(ChatRoomStatus.IN_PROGRESS);
+                    chatRoomRepository.save(room);
+                }
             }
 
             publishToRedis(dto.getRoomId(), sender, dto.getContent(), ChatMessageType.ENTER);

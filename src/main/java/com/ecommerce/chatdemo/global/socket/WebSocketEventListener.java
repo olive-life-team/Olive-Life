@@ -34,13 +34,13 @@ public class WebSocketEventListener {
 
             // 3. DB 상태 변경 (강제 종료 시에도 상담 완료 처리)
             // 비즈니스 로직에 따라 상태를 바꿀지, 유지할지 결정합니다.
-            chatRoomRepository.findById(roomId).ifPresent(room -> {
+            /*chatRoomRepository.findById(roomId).ifPresent(room -> {
                 if (room.getStatus() != ChatRoomStatus.COMPLETED) {
                     room.updateStatus(ChatRoomStatus.COMPLETED);
                     chatRoomRepository.save(room);
                     log.info("방 번호 {} 상담 상태를 COMPLETED로 변경했습니다.", roomId);
                 }
-            });
+            });*/
 
             // 4. 퇴장 시스템 메시지 생성 및 Redis 발행
             // 이 메시지는 실시간으로 접속 중인 다른 사용자(상담원 등)에게 전달됩니다.
@@ -48,7 +48,7 @@ public class WebSocketEventListener {
                     roomId,
                     userId,
                     userName,
-                    userName + "님의 연결이 끊겨 퇴실 처리되었습니다.",
+                    userName + "님의 연결이 끊겼습니다",
                     ChatMessageType.LEAVE
             );
 

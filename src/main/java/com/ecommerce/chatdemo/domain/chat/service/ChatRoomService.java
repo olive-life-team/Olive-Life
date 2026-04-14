@@ -76,7 +76,7 @@ public class ChatRoomService {
 
     // 채팅방 퇴실
     @Transactional
-    public void leaveChatRoom(Long roomId, Long memberId) {
+    public ChatRoomResponse leaveChatRoom(Long roomId, Long memberId) {
         Member member = memberRepository.findById(memberId).orElseThrow(
                 () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
         );
@@ -98,5 +98,7 @@ public class ChatRoomService {
                 ChatMessageType.LEAVE
         );
         chatRedisPublisher.publish(roomId, redisMessage);
+
+        return new ChatRoomResponse(chatRoom);
     }
 }
