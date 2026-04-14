@@ -3,8 +3,10 @@ package com.ecommerce.chatdemo.domain.chat.controller;
 import com.ecommerce.chatdemo.domain.chat.dto.ChatRoomResponse;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatRoomStatus;
 import com.ecommerce.chatdemo.domain.chat.service.AdminChatRoomService;
+import com.ecommerce.chatdemo.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -24,13 +26,12 @@ public class AdminChatRoomController {
      * @param status
      * @return
      */
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CS_ADMIN')")
     @GetMapping
-    public ResponseEntity<List<ChatRoomResponse>> getRooms(
+    public ResponseEntity<ApiResponse<List<ChatRoomResponse>>> getRooms(
             @RequestParam(required = false) ChatRoomStatus status) {
-        return ResponseEntity.ok(adminChatRoomService.getRooms(status));
+        return ResponseEntity.ok(ApiResponse.success(adminChatRoomService.getRooms(status)));
     }
 
     // 채팅방 상태 변경
-
-    // 채탕방 관리자 배정
 }

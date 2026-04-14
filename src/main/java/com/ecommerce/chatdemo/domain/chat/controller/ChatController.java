@@ -5,6 +5,9 @@ import com.ecommerce.chatdemo.domain.chat.dto.TypingIndicatorDto;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatMessage;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatMessageType;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatRoom;
+import com.ecommerce.chatdemo.domain.chat.entity.ChatRoomStatus;
+import com.ecommerce.chatdemo.domain.chat.exception.ChatErrorCode;
+import com.ecommerce.chatdemo.domain.chat.exception.ChatException;
 import com.ecommerce.chatdemo.domain.chat.repository.ChatMessageRepository;
 import com.ecommerce.chatdemo.domain.chat.repository.ChatRoomRepository;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
@@ -43,14 +46,24 @@ public class ChatController {
 
             dto.setContent(sender.getName() + "님이 입장했습니다.");
 
-            // 입장 메시지는 DB에 저장하지 않고 바로 Redis로 발행 후 메서드 종료
+            // admin 입장시 ChatRoom updateAdmin, updateStatus
+            if ("CS_ADMIN".equals(sender.getRole().toString()) || "SUPER_ADMIN".equals(sender.getRole().toString())) {
+                ChatRoom room = chatRoomRepository.findById(dto.getRoomId())
+                        .orElseThrow(() -> new ChatException(ChatErrorCode.CHATROOM_NOT_FOUND));
+                if ("WAITING".equals(room.getStatus().toString())) {
+                    room.updateAdmin(sender);
+                    room.updateStatus(ChatRoomStatus.IN_PROGRESS);
+                    chatRoomRepository.save(room);
+                }
+            }
+
             publishToRedis(dto.getRoomId(), sender, dto.getContent(), ChatMessageType.ENTER);
             return;
         }
 
         // 3. DB 저장 및 발행
         ChatRoom room = chatRoomRepository.findById(dto.getRoomId())
-                .orElseThrow(() -> new IllegalArgumentException("방을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ChatException(ChatErrorCode.CHATROOM_NOT_FOUND));
 
         ChatMessage message = ChatMessage.builder()
                 .room(room)

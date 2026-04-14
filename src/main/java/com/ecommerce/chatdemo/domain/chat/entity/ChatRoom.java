@@ -54,4 +54,12 @@ public class ChatRoom extends BaseEntity {
                 .status(ChatRoomStatus.WAITING)
                 .build();
     }*/
+
+    public void updateStatus(ChatRoomStatus status) {
+        this.status = status;
+    }
+
+    public void updateAdmin(Member admin) {
+        this.admin = admin;
+    }
 }
