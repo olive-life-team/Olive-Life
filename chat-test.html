@@ -42,6 +42,8 @@
     display: grid;
     grid-template-columns: 320px 1fr;
     height: 100vh;
+    max-height: 100vh; /* 화면 높이 고정 */
+    overflow: hidden;
   }
 
   /* ─── SIDEBAR ─── */
@@ -195,6 +197,8 @@
     display: flex;
     flex-direction: column;
     background: var(--bg);
+    height: 100vh; /* 전체 높이 사용 */
+    overflow: hidden;
   }
   .chat-header {
     padding: 20px 28px;
@@ -214,6 +218,7 @@
   .chat-messages {
     flex: 1;
     overflow-y: auto;
+    height: 0;
     padding: 24px 28px;
     display: flex;
     flex-direction: column;
@@ -597,10 +602,14 @@ async function loadRooms() {
       console.error('❌ 응답 실패:', response.status, response.statusText);
       return;
     }
-    
-    rooms = await response.json();
-    console.log('✅ 채팅방 목록 로드 완료:', rooms);
-    renderRooms();
+
+    const result = await response.json(); // result는 ApiResponse 객체
+
+    if (result.success) {
+      rooms = result.data;
+      console.log('✅ 채팅방 목록 로드 완료:', rooms);
+      renderRooms();
+    }
   } catch (error) {
     console.error('❌ 채팅방 목록 로드 실패:', error);
   }
@@ -634,9 +643,14 @@ async function loadAdminRooms(status) {
       return;
     }
 
-    rooms = await response.json();
-    console.log('✅ 채팅방 목록 로드 완료:', rooms);
-    renderRooms();
+    const result = await response.json(); // result는 ApiResponse 객체
+
+    if (result.success) {
+      rooms = result.data;
+      console.log('✅ 채팅방 목록 로드 완료:', rooms);
+      renderRooms();
+    }
+
   } catch (error) {
     console.error('❌ 채팅방 목록 로드 실패:', error);
   }
@@ -646,9 +660,27 @@ async function createRoom() {
   const input = document.getElementById('roomNameInput');
   const name = input.value.trim();
   const token = jwtToken;
-  
+
+  // 1. @NotBlank 대응: 필수 입력 및 공백만 입력 체크
   if (!name) {
-    alert('채팅방 이름을 입력해주세요');
+    alert('채팅방 이름을 입력해주세요. (공백만 입력할 수 없습니다)');
+    input.focus();
+    return;
+  }
+
+  // 2. @Size(min = 2, max = 20) 대응: 글자 수 체크
+  if (name.length < 2 || name.length > 20) {
+    alert('채팅방 이름은 2자 이상 20자 이하로 입력해주세요.');
+    input.focus();
+    return;
+  }
+
+  // 3. @Pattern 대응: 허용되지 않는 문자(특수문자 등) 체크
+  // 정규표현식: 한글, 영문, 숫자, 공백만 허용
+  const titleRegex = /^[a-zA-Z0-9가-힣\s]*$/;
+  if (!titleRegex.test(name)) {
+    alert('채팅방 이름에 특수문자를 사용할 수 없습니다. (한글, 영문, 숫자만 가능)');
+    input.focus();
     return;
   }
   
@@ -694,6 +726,15 @@ async function createRoom() {
 
 function renderRooms() {
   const container = document.getElementById('roomList');
+
+  // rooms가 만약 Page/Slice 객체라면 그 안의 content를 사용, 아니면 그대로 사용
+  const roomList = Array.isArray(rooms) ? rooms : (rooms.content || []);
+
+  if (roomList.length === 0) {
+    container.innerHTML = '<p style="padding:12px; color:var(--text-muted); font-size:13px;">채팅방이 없습니다.</p>';
+    return;
+  }
+
   container.innerHTML = rooms.map(room => `
     <div class="room-item ${currentRoomId === room.id ? 'active' : ''}" onclick="selectRoom(${room.id}, '${room.title}')">
       <div>
@@ -717,6 +758,8 @@ async function selectRoom(roomId, roomName) {
   }
   
   currentRoomId = roomId;
+  lastMessageId = null;
+  hasNextMessages = true;
   typingUsers.clear();
   updateTypingIndicator();
   
@@ -730,7 +773,7 @@ async function selectRoom(roomId, roomName) {
   clearMessages();
   
   // 과거 메시지 로드
-  await loadPastMessages(roomId);
+  await loadPastMessages(roomId, true);
   
   // 새 채팅방 구독
   if (stompClient && stompClient.connected) {
@@ -818,38 +861,88 @@ function updateTypingIndicator() {
 // ─────────────────────────────────────────────────────────
 // 메시지 전송/수신
 // ─────────────────────────────────────────────────────────
-async function loadPastMessages(roomId) {
+// 페이징 상태 관리를 위한 변수 (선택된 방이 바뀔 때마다 초기화 필요)
+let lastMessageId = null;
+let hasNextMessages = true;
+let isLoadingMessages = false;
+
+async function loadPastMessages(roomId, isInitial = true) {
+  if (isLoadingMessages || (!isInitial && !hasNextMessages)) return;
+
+  const container = document.getElementById('chatMessages');
+  const previousScrollHeight = container.scrollHeight;
+
   try {
-    console.log('📜 과거 메시지 로드 중...', roomId);
-    const response = await fetch(`${API_BASE}/api/chat/rooms/${roomId}/messages?size=50`);
-    
-    if (!response.ok) {
-      console.error('❌ 메시지 로드 실패:', response.status);
-      return;
+    isLoadingMessages = true;
+
+    // 1. URL 구성: 커서가 존재하면 쿼리 파라미터 추가
+    let url = `${API_BASE}/api/chat/rooms/${roomId}/messages?size=10`;
+    if (!isInitial && lastMessageId) {
+      url += `&cursor=${lastMessageId}`;
     }
-    
-    const messages = await response.json();
-    console.log('✅ 과거 메시지 로드 완료:', messages.length, '개');
-    
-    // 메시지를 시간순으로 정렬 (오래된 것부터)
-    messages.sort((a, b) => {
-      const dateA = new Date(a.createdAt);
-      const dateB = new Date(b.createdAt);
-      return dateA - dateB;
+
+    const response = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${jwtToken}` }
     });
-    
-    // 메시지를 순서대로 표시
-    messages.forEach(msg => {
-      displayPastMessage(msg);
-    });
-    
-    // 스크롤을 맨 아래로
-    const container = document.getElementById('chatMessages');
-    container.scrollTop = container.scrollHeight;
+
+    if (!response.ok) throw new Error('메시지 로드 실패');
+
+    const result = await response.json();
+    const data = result.data;
+    const messages = data.content;
+
+    if (messages && messages.length > 0) {
+      lastMessageId = messages[messages.length - 1].messageId;
+      hasNextMessages = !data.last;
+
+      // 화면 표시를 위해 시간순 정렬
+      const sortedMessages = [...messages].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+      if (isInitial) {
+        clearMessages();
+        sortedMessages.forEach(msg => {
+          container.appendChild(createMessageElement(msg));
+        });
+        container.scrollTop = container.scrollHeight;
+      } else {
+        const existingIds = Array.from(container.querySelectorAll('.message-id-tag')).map(el => el.value);
+
+        [...sortedMessages].reverse().forEach(msg => {
+          container.insertBefore(createMessageElement(msg), container.firstChild);
+        });
+
+        container.scrollTop = container.scrollHeight - previousScrollHeight;
+      }
+    }
   } catch (error) {
-    console.error('❌ 과거 메시지 로드 실패:', error);
+    console.error('❌ 메시지 로드 실패:', error);
+  } finally {
+    isLoadingMessages = false;
   }
 }
+
+function createMessageElement(data) {
+  const isMe = data.senderId === currentUserId;
+  const isSystem = data.content && data.content.includes("입장했습니다");
+  const time = data.createdAt ? new Date(data.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '오후 00:00';
+
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${isMe ? 'me' : ''} ${isSystem ? 'system' : ''}`;
+  messageDiv.innerHTML = `
+    <div class="message-sender">${data.senderName}</div>
+    <div class="message-bubble">${escapeHtml(data.content)}</div>
+    <div class="message-time">${time}</div>
+  `;
+  return messageDiv;
+}
+
+document.getElementById('chatMessages').addEventListener('scroll', function(e) {
+  // scrollTop이 0(맨 위)에 도달했을 때 추가 로드
+  if (e.target.scrollTop <= 5 && hasNextMessages && !isLoadingMessages) {
+    console.log('🔄 이전 메시지 더 불러오기...');
+    loadPastMessages(currentRoomId, false);
+  }
+});
 
 function sendMessage(event) {
   event.preventDefault();
@@ -861,7 +954,7 @@ function sendMessage(event) {
   
   const message = {
     roomId: currentRoomId,
-    message: content
+    content: content
   };
   
   stompClient.send('/pub/chat.send', {}, JSON.stringify(message));

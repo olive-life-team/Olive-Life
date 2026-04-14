@@ -27,7 +27,7 @@ public class ChatMessage extends BaseEntity {
     private Member sender;
 
     @Column(nullable = false, length = 255)
-    private String message;
+    private String content;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "message_type", nullable = false, length = 100)
@@ -37,13 +37,13 @@ public class ChatMessage extends BaseEntity {
     private ChatMessage(
             ChatRoom room,
             Member sender,
-            String message,
+            String content,
             ChatMessageType messageType
 
     ) {
         this.room = room;
         this.sender = sender;
-        this.message = message;
+        this.content = content;
         this.messageType = messageType;
     }
 
