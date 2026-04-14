@@ -532,6 +532,8 @@ async function selectUser(userId) {
 // ─────────────────────────────────────────────────────────
 // WebSocket 연결
 // ─────────────────────────────────────────────────────────
+let reconnectAttempts = 0;
+
 function connectWebSocket() {
   console.log('🔌 WebSocket 연결 시도:', WS_URL);
   console.log('🔑 JWT 토큰:', jwtToken ? jwtToken.substring(0, 30) + '...' : 'null');
@@ -548,19 +550,40 @@ function connectWebSocket() {
     { Authorization: `Bearer ${jwtToken}` },
     function(frame) {
       console.log('✅ WebSocket 연결 완료:', frame);
+      reconnectAttempts = 0; // 연결 성공 시 횟수 초기화
       updateStatus(true);
+
+      reSubscribe(currentRoomId);
+      // [복구 로직] 연결 성공 직후 미수신 메시지 체크
+      recoverMissingMessages();
     },
     function(error) {
       console.error('❌ WebSocket 연결 실패:', error);
       updateStatus(false);
+
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000); // 최대 30초
+      console.log(`🔄 재연결 시도 중... (${delay}ms 후)`);
       
       // 재연결 시도
       setTimeout(() => {
-        console.log('🔄 5초 후 재연결 시도...');
+        reconnectAttempts++;
         connectWebSocket();
-      }, 5000);
+      }, delay);
     }
   );
+}
+
+function reSubscribe(roomId) {
+  console.log(`📡 [구독] ${roomId}번 방 수신 시작`);
+
+  // 기존에 살아있을지 모를 구독 정보가 있다면 정리 (중복 방지)
+  if (currentSubscription) currentSubscription.unsubscribe();
+
+  // 새롭게 구독 신청
+  currentSubscription = stompClient.subscribe(`/sub/chat/${roomId}`, function(message) {
+    const data = JSON.parse(message.body);
+    displayMessage(data); // 이제 화면에 뜹니다!
+  });
 }
 
 function updateStatus(connected) {
@@ -990,6 +1013,7 @@ function createMessageElement(data) {
   const messageDiv = document.createElement('div');
   messageDiv.className = `message ${isMe ? 'me' : ''} ${isSystem ? 'system' : ''}`;
   messageDiv.innerHTML = `
+    <input type="hidden" class="message-id-tag" value="${data.messageId}">
     <div class="message-sender">${data.senderName}</div>
     <div class="message-bubble">${escapeHtml(data.content)}</div>
     <div class="message-time">${time}</div>
@@ -1035,6 +1059,10 @@ function sendMessage(event) {
 }
 
 function displayMessage(data) {
+  if (data.messageId) {
+    lastMessageId = data.messageId; // 최신 ID 업데이트
+  }
+
   const container = document.getElementById('chatMessages');
   
   // empty state 제거
@@ -1151,6 +1179,41 @@ document.getElementById('userSelect').addEventListener('change', async function(
   document.getElementById('messageInput').disabled = true;
   document.querySelector('.chat-input-form button').disabled = true;
 });
+
+async function recoverMissingMessages() {
+  if (!currentRoomId || !lastMessageId) return;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/chat/rooms/${currentRoomId}/recovery?lastId=${lastMessageId}`, {
+      headers: { 'Authorization': `Bearer ${jwtToken}` }
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      const missingMessages = result.data; // 누락된 메시지 리스트
+
+      missingMessages.forEach(msg => {
+        // 1. 현재 화면에 렌더링된 모든 ID 태그(.message-id-tag)를 가져옵니다.
+        const existingTags = document.querySelectorAll('.message-id-tag');
+
+        // 2. 그 중 지금 추가하려는 메시지 ID와 일치하는 것이 있는지 확인합니다.
+        const isAlreadyOnScreen = Array.from(existingTags).some(tag => {
+          return String(tag.value) === String(msg.messageId);
+        });
+
+        // 3. 화면에 없을 때만 추가합니다.
+        if (!isAlreadyOnScreen) {
+          console.log(`📥 누락 메시지 추가: [${msg.messageId}] ${msg.content}`);
+          displayMessage(msg);
+        } else {
+          console.log(`⏩ 중복 메시지 건너뜀: [${msg.messageId}]`);
+        }
+      });
+    }
+  } catch (e) {
+    console.error("메시지 복구 실패:", e);
+  }
+}
 
 // ─────────────────────────────────────────────────────────
 // 시작
