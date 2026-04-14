@@ -47,7 +47,6 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
 
-    // TODO: 에러코드 정리하기. 어느 로직에서 발생한 어떤 에러?
     // 즉시 결제(장바구니X)
     @Transactional
     public CreateOrderResponse createDirectOrder(Long memberId, DirectOrderRequest request) {
