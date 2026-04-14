@@ -5,3 +5,7 @@ out
 *.iml
 *.log
 .env
+
+build/
+!build/libs/
+!build/libs/*.jar

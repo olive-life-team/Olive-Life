@@ -52,10 +52,11 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.7'
 
     /*
-     * JPA + MySQL 영속성 처리용
+     * JPA + MySQL 영속성 처리용 + test코드 h2로 실행(CI는 h2 사용)
      */
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.mysql:mysql-connector-j'
+    testRuntimeOnly 'com.h2database:h2'
 
     /*
      * Redis 사용용
