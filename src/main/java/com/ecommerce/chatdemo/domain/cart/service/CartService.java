@@ -9,14 +9,16 @@ import com.ecommerce.chatdemo.domain.cart.entity.Cart;
 import com.ecommerce.chatdemo.domain.cart.repository.CartRepository;
 import com.ecommerce.chatdemo.domain.cartitem.entity.CartItem;
 import com.ecommerce.chatdemo.domain.cartitem.exception.CartItemErrorCode;
+import com.ecommerce.chatdemo.domain.cartitem.exception.CartItemException;
 import com.ecommerce.chatdemo.domain.cartitem.repository.CartItemRepository;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.domain.member.repository.MemberRepository;
 import com.ecommerce.chatdemo.domain.product.entity.Product;
 import com.ecommerce.chatdemo.domain.product.exception.ProductErrorCode;
+import com.ecommerce.chatdemo.domain.product.exception.ProductException;
 import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
-import com.ecommerce.chatdemo.global.exception.BusinessException;
+import com.ecommerce.chatdemo.global.exception.AuthException;
 import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,7 +41,7 @@ public class CartService {
     @Transactional
     public CreateCartResponse createCart(Long memberId, CreateCartRequest request) {
         Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new BusinessException(AuthErrorCode.USER_NOT_FOUND)
+                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
         );
         // 해당 사용자의 카트가 있는 지 확인. 없다면 새로 생성해서 저장
         Cart cart = cartRepository.findByMemberId(memberId).orElseGet(
@@ -47,7 +49,7 @@ public class CartService {
 
         // 상품이 존재하는 지 확인.
         Product product = productRepository.findById(request.getProductId()).orElseThrow(
-                () -> new BusinessException(ProductErrorCode.PRODUCT_NOT_FOUND)
+                () -> new ProductException(ProductErrorCode.PRODUCT_NOT_FOUND)
         );
 
         // 이미 담긴 상품인지 확인 (중복체크)
@@ -104,15 +106,15 @@ public class CartService {
     public UpdateCartItemResponse updateCartItem(Long memberId, Long cartItemId, UpdateCartItemRequest request) {
         // 해당 장바구니 상품 조회
         CartItem cartItem = cartItemRepository.findByCartItemIdWithProductAndMember(cartItemId).orElseThrow(
-                () -> new BusinessException(CartItemErrorCode.CARTITEM_NOT_FOUND)
+                () -> new CartItemException(CartItemErrorCode.CARTITEM_NOT_FOUND)
         );
         // 본인 장바구니 맞는 지
         if (!cartItem.getCart().getMember().getId().equals(memberId)) {
-            throw new BusinessException(CommonErrorCode.FORBIDDEN);
+            throw new AuthException(CommonErrorCode.FORBIDDEN);
         }
         // 변경하려는 수량이 0 이하면 에러
         if (request.getQuantity() <= 0) {
-            throw new BusinessException(CartItemErrorCode.INVALID_QUANTITY);
+            throw new CartItemException(CartItemErrorCode.INVALID_QUANTITY);
         }
         // 재고 체크
         cartItem.getProduct().validateStock(request.getQuantity());
@@ -128,11 +130,11 @@ public class CartService {
     public void deleteCartItem(Long memberId, Long cartItemId) {
         // cartItem 조회
         CartItem cartItem = cartItemRepository.findByCartItemWithCartAndMember(cartItemId).orElseThrow(
-                () -> new BusinessException(CartItemErrorCode.CARTITEM_NOT_FOUND)
+                () -> new CartItemException(CartItemErrorCode.CARTITEM_NOT_FOUND)
         );
         // 본인 장바구니 맞는 지 확인
         if (!cartItem.getCart().getMember().getId().equals(memberId)) {
-            throw new BusinessException(CommonErrorCode.FORBIDDEN);
+            throw new AuthException(CommonErrorCode.FORBIDDEN);
         }
         cartItemRepository.delete(cartItem);
     }
