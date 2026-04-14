@@ -32,6 +32,4 @@ public class AdminChatRoomController {
     }
 
     // 채팅방 상태 변경
-
-    // 채탕방 관리자 배정
 }

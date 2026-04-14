@@ -58,4 +58,8 @@ public class ChatRoom extends BaseEntity {
     public void updateStatus(ChatRoomStatus status) {
         this.status = status;
     }
+
+    public void updateAdmin(Member admin) {
+        this.admin = admin;
+    }
 }
