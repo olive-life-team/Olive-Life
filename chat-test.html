@@ -660,9 +660,27 @@ async function createRoom() {
   const input = document.getElementById('roomNameInput');
   const name = input.value.trim();
   const token = jwtToken;
-  
+
+  // 1. @NotBlank 대응: 필수 입력 및 공백만 입력 체크
   if (!name) {
-    alert('채팅방 이름을 입력해주세요');
+    alert('채팅방 이름을 입력해주세요. (공백만 입력할 수 없습니다)');
+    input.focus();
+    return;
+  }
+
+  // 2. @Size(min = 2, max = 20) 대응: 글자 수 체크
+  if (name.length < 2 || name.length > 20) {
+    alert('채팅방 이름은 2자 이상 20자 이하로 입력해주세요.');
+    input.focus();
+    return;
+  }
+
+  // 3. @Pattern 대응: 허용되지 않는 문자(특수문자 등) 체크
+  // 정규표현식: 한글, 영문, 숫자, 공백만 허용
+  const titleRegex = /^[a-zA-Z0-9가-힣\s]*$/;
+  if (!titleRegex.test(name)) {
+    alert('채팅방 이름에 특수문자를 사용할 수 없습니다. (한글, 영문, 숫자만 가능)');
+    input.focus();
     return;
   }
   
