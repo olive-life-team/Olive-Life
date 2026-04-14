@@ -99,4 +99,9 @@ public class MemberCoupon extends BaseEntity {
         this.status = MemberCouponStatus.USED;
         this.usedAt = LocalDateTime.now();
     }
+
+    // 쿠폰 복구 메서드, TODO: 어떻게 할지 의논
+    public void restoreCoupon() {
+        this.status = MemberCouponStatus.AVAILABLE;
+    }
 }

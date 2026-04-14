@@ -94,4 +94,9 @@ public class Member extends BaseEntity {
     public void decreasePointBalance(Long usePoints) {
         this.pointBalance -= usePoints;
     }
+
+    // 포인트 복구 메서드
+    public void increasePointBalance(Long usePoints) {
+        this.pointBalance += usePoints;
+    }
 }

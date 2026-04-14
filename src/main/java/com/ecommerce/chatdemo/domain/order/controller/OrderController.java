@@ -1,7 +1,9 @@
 package com.ecommerce.chatdemo.domain.order.controller;
 
+import com.ecommerce.chatdemo.domain.order.dto.request.CancelOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.CreateOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.DirectOrderRequest;
+import com.ecommerce.chatdemo.domain.order.dto.response.CancelOrderResponse;
 import com.ecommerce.chatdemo.domain.order.dto.response.OrderResponse;
 import com.ecommerce.chatdemo.domain.order.dto.response.GetOrderResponse;
 import com.ecommerce.chatdemo.domain.order.service.OrderService;
@@ -57,5 +59,15 @@ public class OrderController {
             @PathVariable Long orderId
     ) {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOneOrder(loginUserInfo.id(), orderId)));
+    }
+
+    // 주문 취소 (환불)
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<CancelOrderResponse>> cancelOrder(
+            @LoginUser LoginUserInfo loginUserInfo,
+            @PathVariable Long orderId,
+            @RequestBody CancelOrderRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(loginUserInfo.id(), orderId, request)));
     }
 }

@@ -12,11 +12,14 @@ import com.ecommerce.chatdemo.domain.membercoupon.entity.MemberCoupon;
 import com.ecommerce.chatdemo.domain.membercoupon.exception.MemberCouponErrorCode;
 import com.ecommerce.chatdemo.domain.membercoupon.exception.MemberCouponException;
 import com.ecommerce.chatdemo.domain.membercoupon.repository.MemberCouponRepository;
+import com.ecommerce.chatdemo.domain.order.dto.request.CancelOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.CreateOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.DirectOrderRequest;
+import com.ecommerce.chatdemo.domain.order.dto.response.CancelOrderResponse;
 import com.ecommerce.chatdemo.domain.order.dto.response.OrderResponse;
 import com.ecommerce.chatdemo.domain.order.dto.response.GetOrderResponse;
 import com.ecommerce.chatdemo.domain.order.entity.Order;
+import com.ecommerce.chatdemo.domain.order.entity.OrderStatus;
 import com.ecommerce.chatdemo.domain.order.exception.OrderErrorCode;
 import com.ecommerce.chatdemo.domain.order.exception.OrderException;
 import com.ecommerce.chatdemo.domain.order.repository.OrderRepository;
@@ -231,11 +234,49 @@ public class OrderService {
         );
         // 본인 주문이 아니면 에러
         if (!order.getMember().getId().equals(memberId)) {
-            throw new OrderException(CommonErrorCode.FORBIDDEN);
+            throw new AuthException(CommonErrorCode.FORBIDDEN);
         }
         // fetch join으로 orderItem, product 한 번에 조회 -> N+1 방지
         List<OrderItem> orderItems = orderItemRepository.findByOrderWithProduct(order);
 
         return new OrderResponse(order, orderItems);
+    }
+
+    // 주문 취소 (환불)
+    @Transactional
+    public CancelOrderResponse cancelOrder(Long memberId, Long orderId, CancelOrderRequest request) {
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
+        );
+        // order 조회시 member도 같이 조회 -> N+1 방지
+        Order order = orderRepository.findByIdWithMember(orderId).orElseThrow(
+                () -> new OrderException(OrderErrorCode.ORDER_NOT_FOUND)
+        );
+        // 본인 주문인지
+        if (!order.getMember().getId().equals(memberId)) {
+            throw new AuthException(CommonErrorCode.FORBIDDEN);
+        }
+        // 이미 취소된 주문인지
+        if (order.getStatus() == OrderStatus.CANCELED) {
+            throw new OrderException(OrderErrorCode.ALREADY_CANCEL_ORDER);
+        }
+        // 주문 상태 변경
+        order.cancel();
+
+        // fetch join으로 orderItem, product 한 번에 조회 -> N+1 방지
+        List<OrderItem> orderItems = orderItemRepository.findByOrderWithProduct(order);
+
+        // 재고 복구
+        for (OrderItem item : orderItems) {
+            item.getProduct().increaseStock(item.getQuantity());
+        }
+        // 포인트 복구
+        member.increasePointBalance(order.getUsedPoints());
+        // 쿠폰 복구
+        Optional<MemberCoupon> memberCoupon = memberCouponRepository.findByOrder(order);
+        if (memberCoupon.isPresent()) {
+            memberCoupon.get().restoreCoupon();
+        }
+        return new CancelOrderResponse(order);
     }
 }
