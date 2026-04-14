@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>올리브영 고객센터 채팅</title>
+  <title>올리브삶 고객센터 채팅</title>
   <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
   <style>
@@ -998,9 +998,12 @@ function createMessageElement(data) {
 }
 
 document.getElementById('chatMessages').addEventListener('scroll', function(e) {
-  // scrollTop이 0(맨 위)에 도달했을 때 추가 로드
-  if (e.target.scrollTop <= 5 && hasNextMessages && !isLoadingMessages) {
-    console.log('🔄 이전 메시지 더 불러오기...');
+  if (e.target.scrollTop <= 5 &&
+          hasNextMessages &&
+          !isLoadingMessages &&
+          lastMessageId !== null) {
+
+    console.log('🔄 서버에 과거 내역이 있는 것으로 판단되어 데이터를 요청합니다.');
     loadPastMessages(currentRoomId, false);
   }
 });
