@@ -1,7 +1,10 @@
 package com.ecommerce.chatdemo.domain.chat.service;
 
 import com.ecommerce.chatdemo.domain.chat.dto.ChatRoomResponse;
+import com.ecommerce.chatdemo.domain.chat.entity.ChatRoom;
 import com.ecommerce.chatdemo.domain.chat.entity.ChatRoomStatus;
+import com.ecommerce.chatdemo.domain.chat.exception.ChatErrorCode;
+import com.ecommerce.chatdemo.domain.chat.exception.ChatException;
 import com.ecommerce.chatdemo.domain.chat.repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,5 +25,16 @@ public class AdminChatRoomService {
                 .stream()
                 .map(ChatRoomResponse::new)
                 .toList();
+    }
+
+    // 관리자가 채팅방 상태 변경
+    @Transactional
+    public ChatRoomResponse updateStatus(Long roomId, ChatRoomStatus status) {
+        ChatRoom chatRoom = chatRoomRepository.findById(roomId).orElseThrow(
+                () -> new ChatException(ChatErrorCode.CHATROOM_NOT_FOUND)
+        );
+        chatRoom.updateStatus(status);
+
+        return new ChatRoomResponse(chatRoom);
     }
 }
