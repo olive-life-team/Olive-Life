@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
-public class DirectOrderResponse {
+public class CreateOrderResponse {
 
     private final Long memberId;
     private final Long orderId;
@@ -36,7 +36,7 @@ public class DirectOrderResponse {
         }
     }
 
-    public DirectOrderResponse(Order order, List<OrderItem> orderItems) {
+    public CreateOrderResponse(Order order, List<OrderItem> orderItems) {
         this.memberId = order.getMember().getId();
         this.orderId = order.getId();
         this.orderNumber = order.getOrderNumber();
