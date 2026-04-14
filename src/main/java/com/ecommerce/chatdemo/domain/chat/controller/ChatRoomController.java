@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -30,6 +31,7 @@ public class ChatRoomController {
      * @param loginUserInfo
      * @return
      */
+    @PreAuthorize("hasRole('CUSTOMER')")
     @PostMapping
     public ResponseEntity<ApiResponse<CreateChatRoomResponse>> createRoom(
             @Valid @RequestParam String title,
@@ -43,6 +45,7 @@ public class ChatRoomController {
      * @param loginUserInfo
      * @return
      */
+    @PreAuthorize("hasRole('CUSTOMER')")
     @GetMapping
     public ResponseEntity<ApiResponse<List<ChatRoomResponse>>> getRooms(
             @LoginUser LoginUserInfo loginUserInfo) {

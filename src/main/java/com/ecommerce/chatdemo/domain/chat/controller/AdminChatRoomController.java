@@ -6,6 +6,7 @@ import com.ecommerce.chatdemo.domain.chat.service.AdminChatRoomService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,6 +26,7 @@ public class AdminChatRoomController {
      * @param status
      * @return
      */
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CS_ADMIN')")
     @GetMapping
     public ResponseEntity<ApiResponse<List<ChatRoomResponse>>> getRooms(
             @RequestParam(required = false) ChatRoomStatus status) {
