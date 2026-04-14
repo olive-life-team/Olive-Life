@@ -14,7 +14,7 @@ import com.ecommerce.chatdemo.domain.membercoupon.exception.MemberCouponExceptio
 import com.ecommerce.chatdemo.domain.membercoupon.repository.MemberCouponRepository;
 import com.ecommerce.chatdemo.domain.order.dto.request.CreateOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.DirectOrderRequest;
-import com.ecommerce.chatdemo.domain.order.dto.response.CreateOrderResponse;
+import com.ecommerce.chatdemo.domain.order.dto.response.OrderResponse;
 import com.ecommerce.chatdemo.domain.order.dto.response.GetOrderResponse;
 import com.ecommerce.chatdemo.domain.order.entity.Order;
 import com.ecommerce.chatdemo.domain.order.exception.OrderErrorCode;
@@ -28,6 +28,7 @@ import com.ecommerce.chatdemo.domain.product.exception.ProductException;
 import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
 import com.ecommerce.chatdemo.global.exception.AuthException;
+import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,7 +54,7 @@ public class OrderService {
 
     // 즉시 결제(장바구니X)
     @Transactional
-    public CreateOrderResponse createDirectOrder(Long memberId, DirectOrderRequest request) {
+    public OrderResponse createDirectOrder(Long memberId, DirectOrderRequest request) {
         Member member = memberRepository.findById(memberId).orElseThrow(
                 () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
         );
@@ -112,12 +114,12 @@ public class OrderService {
         if (memberCoupon != null) {
             memberCoupon.useCoupon(order);
         }
-        return new CreateOrderResponse(order,List.of(orderItem));
+        return new OrderResponse(order,List.of(orderItem));
     }
 
     // 주문 생성 (장바구니 구매)
     @Transactional
-    public CreateOrderResponse createOrder(Long memberId, CreateOrderRequest request) {
+    public OrderResponse createOrder(Long memberId, CreateOrderRequest request) {
         Member member = memberRepository.findById(memberId).orElseThrow(
                 () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
         );
@@ -192,7 +194,7 @@ public class OrderService {
         //
         cartItemRepository.deleteAllInBatch(cartItems);
 
-        return new CreateOrderResponse(order, orderItems);
+        return new OrderResponse(order, orderItems);
     }
 
     // 주문 목록 조회
@@ -216,5 +218,24 @@ public class OrderService {
                     return new GetOrderResponse(order, orderItems);
                 })
                 .toList();
+    }
+
+    // 주문 상세 조회
+    public OrderResponse getOneOrder(Long memberId, Long orderId) {
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
+        );
+        // order 조회시 member도 같이 조회 -> N+1 방지
+        Order order = orderRepository.findByIdWithMember(orderId).orElseThrow(
+                () -> new OrderException(OrderErrorCode.ORDER_NOT_FOUND)
+        );
+        // 본인 주문이 아니면 에러
+        if (!order.getMember().getId().equals(memberId)) {
+            throw new OrderException(CommonErrorCode.FORBIDDEN);
+        }
+        // fetch join으로 orderItem, product 한 번에 조회 -> N+1 방지
+        List<OrderItem> orderItems = orderItemRepository.findByOrderWithProduct(order);
+
+        return new OrderResponse(order, orderItems);
     }
 }
