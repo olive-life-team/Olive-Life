@@ -36,7 +36,7 @@ public class ChatRoomService {
                 () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
         );
 
-       ChatRoom chatRoom = ChatRoom.builder()
+        ChatRoom chatRoom = ChatRoom.builder()
                .title(title)
                .member(member)
                .build();

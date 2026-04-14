@@ -7,6 +7,7 @@ import com.ecommerce.chatdemo.domain.chat.service.ChatRoomService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import com.ecommerce.chatdemo.global.security.annotation.LoginUser;
 import com.ecommerce.chatdemo.global.security.dto.LoginUserInfo;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Slice;
 import org.springframework.http.HttpStatus;
@@ -30,7 +31,7 @@ public class ChatRoomController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<CreateChatRoomResponse>> createRoom(
-            @RequestParam String title,
+            @Valid @RequestParam String title,
             @LoginUser LoginUserInfo loginUserInfo) {
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 ApiResponse.success(chatRoomService.createRoom(title, loginUserInfo.id())));

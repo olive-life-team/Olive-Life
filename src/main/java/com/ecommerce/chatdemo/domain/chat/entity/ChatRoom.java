@@ -3,6 +3,9 @@ package com.ecommerce.chatdemo.domain.chat.entity;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +21,12 @@ public class ChatRoom extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "채팅방 이름은 필수이며 공백으로만 구성될 수 없습니다.")
+    @Size(min = 2, max = 20, message = "채팅방 이름은 2자 이상 20자 이하로 입력해주세요.")
+    @Pattern(
+            regexp = "^[a-zA-Z0-9가-힣\\s]*$",
+            message = "채팅방 이름은 한글, 영문, 숫자, 공백만 허용되며 특수문자는 사용할 수 없습니다."
+    )
     private String title;
 
     @JoinColumn(name = "member_id", nullable = false)
