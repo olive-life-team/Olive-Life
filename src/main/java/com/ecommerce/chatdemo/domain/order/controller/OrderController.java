@@ -2,7 +2,7 @@ package com.ecommerce.chatdemo.domain.order.controller;
 
 import com.ecommerce.chatdemo.domain.order.dto.request.CreateOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.DirectOrderRequest;
-import com.ecommerce.chatdemo.domain.order.dto.response.CreateOrderResponse;
+import com.ecommerce.chatdemo.domain.order.dto.response.OrderResponse;
 import com.ecommerce.chatdemo.domain.order.dto.response.GetOrderResponse;
 import com.ecommerce.chatdemo.domain.order.service.OrderService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
@@ -24,7 +24,7 @@ public class OrderController {
 
     // 즉시 결제(장바구니X)
     @PostMapping("/direct")
-    public ResponseEntity<ApiResponse<CreateOrderResponse>> createDirectOrder(
+    public ResponseEntity<ApiResponse<OrderResponse>> createDirectOrder(
             @LoginUser LoginUserInfo loginUserInfo,
             @RequestBody DirectOrderRequest request
     ) {
@@ -34,7 +34,7 @@ public class OrderController {
 
     // 주문 생성(장바구니 구매)
     @PostMapping
-    public ResponseEntity<ApiResponse<CreateOrderResponse>> createOrder(
+    public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
             @LoginUser LoginUserInfo loginUserInfo,
             @RequestBody CreateOrderRequest request
     ) {
@@ -48,5 +48,14 @@ public class OrderController {
             @LoginUser LoginUserInfo loginUserInfo
     ) {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrders(loginUserInfo.id())));
+    }
+
+    // 주문 상세 조회
+    @GetMapping("/{orderId}")
+    public ResponseEntity<ApiResponse<OrderResponse>> getOneOrder(
+            @LoginUser LoginUserInfo loginUserInfo,
+            @PathVariable Long orderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getOneOrder(loginUserInfo.id(), orderId)));
     }
 }
