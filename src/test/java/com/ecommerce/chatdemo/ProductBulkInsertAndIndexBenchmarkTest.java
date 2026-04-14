@@ -113,7 +113,7 @@ class ProductBulkInsertAndIndexBenchmarkTest {
 
     private void insertCategoriesIfNotExists() {
         Integer count = jdbcTemplate.queryForObject(
-                "select count(*) from category",
+                "select count(*) from category where parent_id is not null",
                 Integer.class
         );
 
@@ -121,25 +121,43 @@ class ProductBulkInsertAndIndexBenchmarkTest {
             return;
         }
 
-        jdbcTemplate.update(
-                "insert into category (name, parent_id, created_at, modified_at) values (?, ?, now(), now())",
-                "스킨케어", null
+        // 대분류 ID 조회
+        Long skincare = getCategoryId("스킨케어");
+        Long makeup    = getCategoryId("메이크업");
+        Long hair      = getCategoryId("헤어");
+        Long body      = getCategoryId("바디");
+        Long perfume   = getCategoryId("향수");
+
+        // 소분류 삽입
+        insertSubCategory("선크림",    skincare);
+        insertSubCategory("토너",      skincare);
+        insertSubCategory("세럼",      skincare);
+        insertSubCategory("에센스",    skincare);
+        insertSubCategory("크림",      skincare);
+        insertSubCategory("립스틱",    makeup);
+        insertSubCategory("쿠션",      makeup);
+        insertSubCategory("마스크팩",  makeup);
+        insertSubCategory("앰플",      makeup);
+        insertSubCategory("헤어에센스", hair);
+        insertSubCategory("클렌징폼",  hair);
+        insertSubCategory("바디크림",  body);
+        insertSubCategory("바디워시",  body);
+        insertSubCategory("퍼퓸",      perfume);
+    }
+
+
+    private Long getCategoryId(String name) {
+        return jdbcTemplate.queryForObject(
+                "select id from category where name = ? and parent_id is null",
+                Long.class,
+                name
         );
+    }
+
+    private void insertSubCategory(String name, Long parentId) {
         jdbcTemplate.update(
                 "insert into category (name, parent_id, created_at, modified_at) values (?, ?, now(), now())",
-                "메이크업", null
-        );
-        jdbcTemplate.update(
-                "insert into category (name, parent_id, created_at, modified_at) values (?, ?, now(), now())",
-                "헤어", null
-        );
-        jdbcTemplate.update(
-                "insert into category (name, parent_id, created_at, modified_at) values (?, ?, now(), now())",
-                "바디", null
-        );
-        jdbcTemplate.update(
-                "insert into category (name, parent_id, created_at, modified_at) values (?, ?, now(), now())",
-                "향수", null
+                name, parentId
         );
     }
 
@@ -147,21 +165,37 @@ class ProductBulkInsertAndIndexBenchmarkTest {
         jdbcTemplate.update("delete from product");
     }
 
+//    private void dropIndexIfExists() {
+//        try {
+//            jdbcTemplate.execute("drop index idx_product_category_status_name on product");
+//        } catch (Exception ignored) {
+//        }
+//    }
+
     private void dropIndexIfExists() {
-        try {
-            jdbcTemplate.execute("drop index idx_product_category_status_name on product");
-        } catch (Exception ignored) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.statistics " +
+                        "WHERE table_schema = DATABASE() " +
+                        "AND table_name = 'product' " +
+                        "AND index_name = 'idx_product_category_status_name'",
+                Integer.class
+        );
+        if (count != null && count > 0) {
+            try {
+                jdbcTemplate.execute("CREATE INDEX idx_product_category_id_temp ON product (category_id)");
+            } catch (Exception ignored) {}
+            jdbcTemplate.execute("DROP INDEX idx_product_category_status_name ON product");
         }
     }
 
     private List<Long> findCategoryIds() {
         List<Long> categoryIds = jdbcTemplate.queryForList(
-                "select id from category",
+                "select id from category where parent_id is not null",
                 Long.class
         );
 
         if (categoryIds.isEmpty()) {
-            throw new IllegalStateException("category 데이터가 없습니다.");
+            throw new IllegalStateException("소분류 카테고리 데이터가 없습니다.");
         }
 
         return categoryIds;
