@@ -15,6 +15,7 @@ import com.ecommerce.chatdemo.domain.membercoupon.repository.MemberCouponReposit
 import com.ecommerce.chatdemo.domain.order.dto.request.CreateOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.DirectOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.response.CreateOrderResponse;
+import com.ecommerce.chatdemo.domain.order.dto.response.GetOrderResponse;
 import com.ecommerce.chatdemo.domain.order.entity.Order;
 import com.ecommerce.chatdemo.domain.order.exception.OrderErrorCode;
 import com.ecommerce.chatdemo.domain.order.exception.OrderException;
@@ -33,6 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -190,5 +193,28 @@ public class OrderService {
         cartItemRepository.deleteAllInBatch(cartItems);
 
         return new CreateOrderResponse(order, orderItems);
+    }
+
+    // 주문 목록 조회
+    public List<GetOrderResponse> getOrders(Long memberId) {
+        Member member = memberRepository.findById(memberId).orElseThrow(
+                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
+        );
+        List<Order> orders = orderRepository.findByMemberId(memberId);
+
+        // WHERE IN 으로 한 번에 모든 OrderItem 조회
+        List<OrderItem> allOrderItems = orderItemRepository.findByOrderIn(orders);
+
+        // Map 그룹핑 -> 각 주문상품들이 어드 주문에 들어가야 하는지 orderId로 같은 거 끼리 묶음
+        Map<Long, List<OrderItem>> orderItemMap = allOrderItems.stream()
+                .collect(Collectors.groupingBy(orderItem -> orderItem.getOrder().getId()));
+
+        return orders.stream()
+                .map(order -> {
+                    // key가 있으면 주문상품 목록 반환, 없으면 빈 리스트 반환
+                    List<OrderItem> orderItems = orderItemMap.getOrDefault(order.getId(), List.of());
+                    return new GetOrderResponse(order, orderItems);
+                })
+                .toList();
     }
 }
