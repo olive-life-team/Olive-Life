@@ -1,381 +1,374 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>채팅 테스트</title>
-<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>올리브영 고객센터 채팅</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
 
-  :root {
-    --bg: #0a0e27;
-    --surface: #151a33;
-    --surface2: #1e2542;
-    --border: #2a3150;
-    --text: #e8eaed;
-    --text-muted: #8b92b0;
-    --blue: #4c9aff;
-    --green: #36b37e;
-    --red: #ff5630;
-    --yellow: #ffab00;
-    --purple: #6554c0;
-  }
+    :root {
+      --oy-green: #97a13c;       /* 올리브영 메인 그린 */
+      --oy-green-dark: #778328;  /* 강조용 딥 그린 */
+      --oy-coral: #f37471;      /* 포인트 코랄 */
+      --bg-light: #f9fafb;      /* 배경색 */
+      --surface: #ffffff;        /* 카드/섹션 배경 */
+      --border: #e5e7eb;        /* 경계선 */
+      --text-main: #222222;     /* 기본 텍스트 */
+      --text-muted: #888888;    /* 부가 설명 */
+      --me-bubble: #97a13c;     /* 내 메시지 (그린) */
+      --other-bubble: #f1f3f5;  /* 상대방 메시지 */
+    }
 
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  body {
-    font-family: 'IBM Plex Sans KR', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+    body {
+      font-family: 'Pretendard', sans-serif;
+      background: #f0f1f3; /* 전체 배경색을 약간 어둡게 */
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      align-items: center;  /* 수직 중앙 정렬 */
+      justify-content: center; /* 수평 중앙 정렬 */
+    }
 
-  /* ─── LAYOUT ─── */
-  .container {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    height: 100vh;
-    max-height: 100vh; /* 화면 높이 고정 */
-    overflow: hidden;
-  }
+    /* ─── LAYOUT ─── */
+    .container {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      width: 95%;
+      max-width: 1100px;
+      height: 85vh;       /* 전체 높이 고정 */
+      max-height: 1000px;
+      margin: 0 auto;     /* 중앙 정렬 */
+      background: var(--surface);
+      border-radius: 24px;
+      overflow: hidden;   /* 컨테이너 바깥으로 튀어나오는 것 방지 */
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border);
+    }
 
-  /* ─── SIDEBAR ─── */
-  .sidebar {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .sidebar-header {
-    padding: 24px;
-    border-bottom: 1px solid var(--border);
-  }
-  .sidebar-header h1 {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    margin-bottom: 8px;
-  }
-  .status-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-top: 12px;
-  }
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--red);
-    animation: pulse 2s infinite;
-  }
-  .status-dot.connected {
-    background: var(--green);
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      height: 100%;       /* 컨테이너 높이 100% 사용 */
+    }
+    .sidebar-header {
+      padding: 30px 24px;
+      background: #fff;
+    }
+    .sidebar-header h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--oy-green-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #ccc;
+    }
+    .status-dot.connected {
+      background: var(--oy-coral);
+      box-shadow: 0 0 8px var(--oy-coral);
+    }
 
-  .user-select {
-    padding: 20px 24px;
-    border-bottom: 1px solid var(--border);
-  }
-  .user-select label {
-    display: block;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-    font-weight: 600;
-  }
-  .user-select select {
-    width: 100%;
-    padding: 10px 14px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-size: 14px;
-    font-family: 'IBM Plex Sans KR', sans-serif;
-  }
-  .user-select select:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
+    .user-select {
+      padding: 0 24px 20px;
+    }
+    .user-select label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .user-select select {
+      width: 100%;
+      padding: 12px;
+      background: var(--bg-light);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
 
-  .room-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-  }
-  .room-list h3 {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-muted);
-    padding: 12px;
-    font-weight: 600;
-  }
-  .room-item {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .room-item:hover {
-    border-color: var(--blue);
-    background: rgba(76, 154, 255, 0.05);
-  }
-  .room-item.active {
-    border-color: var(--blue);
-    background: rgba(76, 154, 255, 0.1);
-  }
-  .room-item h4 {
-    font-size: 15px;
-    font-weight: 600;
-  }
-  .room-item .room-id {
-    font-size: 12px;
-    color: var(--text-muted);
-    font-family: 'JetBrains Mono', monospace;
-  }
+    .room-list {
+      flex: 1;            /* 헤더와 입력창 제외한 나머지 모두 차지 */
+      overflow-y: auto;   /* 내용이 많아지면 스크롤 생성 */
+      padding: 12px;
+      background: var(--bg-light);
+    }
+    .room-list h3 {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 10px 12px;
+    }
+    .room-item {
+      background: var(--surface);
+      border: 1px solid transparent;
+      border-radius: 15px;
+      padding: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .room-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .room-item.active {
+      border-color: var(--oy-green);
+      background: #fdfef4;
+    }
+    .room-item h4 {
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    .room-item .room-id {
+      font-size: 11px;
+      color: #bbb;
+    }
 
-  .create-room {
-    padding: 16px 24px;
-    border-top: 1px solid var(--border);
-  }
-  .create-room input {
-    width: 100%;
-    padding: 10px 14px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-size: 14px;
-    margin-bottom: 8px;
-  }
-  .create-room input:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
-  .create-room button {
-    width: 100%;
-    padding: 10px;
-    background: var(--blue);
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .create-room button:hover {
-    background: #3d8ee6;
-  }
+    .create-room {
+      padding: 20px 24px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .create-room input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .create-room button {
+      width: 100%;
+      padding: 12px;
+      background: var(--oy-green);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
 
-  /* ─── CHAT AREA ─── */
-  .chat-area {
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-    height: 100vh; /* 전체 높이 사용 */
-    overflow: hidden;
-  }
-  .chat-header {
-    padding: 20px 28px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .chat-header h2 {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-  .chat-header p {
-    font-size: 13px;
-    color: var(--text-muted);
-  }
+    /* ─── CHAT AREA ─── */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      height: 100%;       /* 컨테이너 높이 100% 사용 */
+      overflow: hidden;   /* 헤더/입력창은 고정 */
+    }
+    .chat-header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chat-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .chat-header p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
 
-  .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    height: 0;
-    padding: 24px 28px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .message {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-width: 70%;
-  }
-  .message.me {
-    align-self: flex-end;
-    align-items: flex-end;
-  }
-  .message-sender {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-muted);
-  }
-  .message-bubble {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 12px 16px;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-  .message.me .message-bubble {
-    background: var(--blue);
-    border-color: var(--blue);
-    color: #fff;
-  }
-  .message-time {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
+    .chat-messages {
+      flex: 1;            /* 헤더와 입력창 사이의 모든 공간 차지 */
+      overflow-y: auto;   /* 메시지가 많아지면 스크롤 생성 */
+      padding: 24px;
+      background: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 75%; /* 내 메시지와 상대방 메시지 모두 동일한 최대 너비 설정 */
+      width: fit-content; /* 내용 길이에 맞게 버블 크기 조절 */
+      margin-bottom: 4px;
+    }
+    .message.me {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+    .message:not(.me):not(.system) {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+    .message-sender {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #555;
+    }
+    .message-bubble {
+      padding: 12px 18px;
+      font-size: 14px;
+      line-height: 1.6;
+      border-radius: 18px; /* 기본 둥근 모서리 */
+      box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+      word-break: break-all; /* 긴 단어도 박스 안에서 줄바꿈 */
+    }
+    .message.me .message-bubble {
+      background: var(--me-bubble);
+      color: #fff;
+      border-bottom-right-radius: 4px; /* 오른쪽 하단만 살짝 각지게 하여 방향성 부여 */
+    }
+    .message:not(.me):not(.system) .message-bubble {
+      background: #ffffff; /* 흰색 혹은 연한 회색 */
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px; /* 왼쪽 하단만 살짝 각지게 */
+    }
+    .message-time {
+      font-size: 10px;
+      color: #aaa;
+      margin-top: 4px;
+    }
+    .message-sender {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #555;
+    }
 
-  .chat-input-wrapper {
-    padding: 20px 28px;
-    border-top: 1px solid var(--border);
-    background: var(--surface);
-  }
-  .typing-indicator {
-    font-size: 13px;
-    color: var(--green);
-    padding: 0 0 8px 4px;
-    min-height: 24px;
-    font-style: italic;
-  }
-  .typing-indicator .dots {
-    display: inline-block;
-  }
-  .typing-indicator .dots::after {
-    content: '...';
-    animation: dots 1.4s steps(4, end) infinite;
-  }
-  @keyframes dots {
-    0%, 20% { content: '.'; }
-    40% { content: '..'; }
-    60%, 100% { content: '...'; }
-  }
-  .chat-input-form {
-    display: flex;
-    gap: 12px;
-  }
-  .chat-input-form input {
-    flex: 1;
-    padding: 14px 18px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--text);
-    font-size: 14px;
-  }
-  .chat-input-form input:focus {
-    outline: none;
-    border-color: var(--blue);
-  }
-  .chat-input-form button {
-    padding: 14px 24px;
-    background: var(--blue);
-    border: none;
-    border-radius: 12px;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .chat-input-form button:hover {
-    background: #3d8ee6;
-  }
+    .chat-input-wrapper {
+      padding: 24px 32px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .chat-input-form {
+      display: flex;
+      gap: 12px;
+      background: var(--bg-light);
+      padding: 6px;
+      border-radius: 100px; /* 타원형 입력창 */
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+    .chat-input-form:focus-within {
+      border-color: var(--oy-green);
+    }
+    .chat-input-form input {
+      flex: 1;
+      padding: 10px 20px;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 14px;
+    }
+    .chat-input-form button {
+      padding: 10px 28px;
+      background: var(--oy-green);
+      border: none;
+      border-radius: 100px;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .chat-input-form button:disabled {
+      background: #ccc;
+    }
 
-  .empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    gap: 12px;
-  }
-  .empty-state h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text);
-  }
+    /* 시스템 메시지 */
+    .message.system {
+      align-self: center !important; /* 부모 flex 내에서 중앙 정렬 */
+      width: 100% !important;        /* 전체 너비를 차지해서 텍스트가 중앙에 오게 함 */
+      max-width: 100% !important;    /* 기존 75% 제약 해제 */
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .message.system::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 10%;      /* 선이 너무 끝까지 붙지 않게 조절 */
+      right: 10%;
+      height: 1px;
+      background-color: #e5e7eb; /* 올리브영 경계선 색상 */
+      z-index: 1;
+    }
+    .message.system .message-bubble {
+      background: #f3f4f6;    /* 부드러운 회색 배경 */
+      color: #6b7280;         /* 차분한 회색 글씨 */
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 16px;
+      border-radius: 100px;
+      border: none;
+      box-shadow: none;
+      z-index: 2;             /* 선 위에 글씨가 올라오도록 */
+      position: relative;
+      display: inline-block;
+      text-align: center;
+    }
+    .message.system .message-sender,
+    .message.system .message-time {
+      display: none !important;
+    }
 
-  /* ─── SCROLLBAR ─── */
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
-  ::-webkit-scrollbar-track {
-    background: var(--bg);
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 4px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--text-muted);
-  }
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      text-align: center;
+    }
+    .empty-state h3 { margin-bottom: 8px; color: #999; }
 
-  .message.system {
-    align-self: center;
-    max-width: 100%;
-    padding: 10px 0;
-  }
-  .message.system .message-bubble {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 13px;
-    font-style: italic;
-    text-align: center;
-  }
-  /* 시스템 메시지에는 발신자나 시간을 숨김 */
-  .message.system .message-sender,
-  .message.system .message-time {
-    display: none;
-  }
-  #leaveBtn:hover {
-    filter: brightness(0.9);
-  }
-  #leaveBtn:active {
-    transform: scale(0.98);
-  }
+    /* 스크롤바 디자인 (올리브영 스타일로 깔끔하게) */
+    .room-list::-webkit-scrollbar,
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .room-list::-webkit-scrollbar-thumb,
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: #d1d5db; /* 연한 그레이 */
+      border-radius: 10px;
+    }
+
+    .room-list::-webkit-scrollbar-track,
+    .chat-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
 </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- ════════ SIDEBAR ════════ -->
   <div class="sidebar">
     <div class="sidebar-header">
-      <h1>채팅 테스트</h1>
+      <h1>OLIVE LIFE <span>Chat</span></h1>
       <div class="status-indicator">
         <div class="status-dot" id="statusDot"></div>
         <span id="statusText">연결 대기중...</span>
@@ -383,18 +376,18 @@
     </div>
 
     <div class="user-select">
-      <label>사용자 선택</label>
+      <label>로그인 계정</label>
       <select id="userSelect">
-        <option value="test3@test.com">user1</option>
-        <option value="test2@test.com">admin1</option>
+        <option value="test3@test.com">고객 (User1)</option>
+        <option value="test2@test.com">상담사 (Admin1)</option>
       </select>
     </div>
 
     <div class="room-list">
-      <div style="display: flex; justify-content: space-between; align-items: center; padding-right: 12px;">
-        <h3>채팅방</h3>
-        <div id="adminFilter" style="display: none; gap: 4px;">
-          <select id="statusFilter" onchange="handleStatusChange()" style="padding: 4px 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 4px; font-size: 11px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 12px 10px;">
+        <h3>채팅 상담 목록</h3>
+        <div id="adminFilter" style="display: none;">
+          <select id="statusFilter" onchange="handleStatusChange()" style="padding: 4px; font-size: 11px; border-radius: 4px;">
             <option value="WAITING">대기중</option>
             <option value="IN_PROGRESS">처리중</option>
             <option value="COMPLETED">완료</option>
@@ -405,35 +398,34 @@
     </div>
 
     <div class="create-room" id="create-room">
-      <input type="text" id="roomNameInput" placeholder="새 채팅방 이름..."/>
-      <button onclick="createRoom()">채팅방 생성</button>
+      <input type="text" id="roomNameInput" placeholder="문의 제목을 입력하세요"/>
+      <button onclick="createRoom()">1:1 상담 시작하기</button>
     </div>
   </div>
 
-  <!-- ════════ CHAT AREA ════════ -->
   <div class="chat-area">
-    <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="chat-header">
       <div>
-        <h2 id="chatTitle">채팅방을 선택해주세요</h2>
-        <p id="chatSubtitle">왼쪽에서 채팅방을 선택하거나 새로 만들어보세요</p>
+        <h2 id="chatTitle">상담을 선택해주세요</h2>
+        <p id="chatSubtitle">올리브삶이 신속하게 도와드리겠습니다.</p>
       </div>
-      <button id="leaveBtn" onclick="leaveRoom()" style="display: none; padding: 8px 16px; background: var(--red); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
-        퇴실하기
+      <button id="leaveBtn" onclick="leaveRoom()" style="display: none; padding: 10px 20px; background: #eee; color: #666; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">
+        상담 종료
       </button>
     </div>
 
     <div class="chat-messages" id="chatMessages">
       <div class="empty-state">
-        <h3>📭 메시지가 없습니다</h3>
-        <p>채팅방을 선택하고 메시지를 보내보세요!</p>
+        <h3 style="font-size: 40px;">🍃</h3>
+        <h3>진행 중인 상담이 없습니다.</h3>
       </div>
     </div>
 
     <div class="chat-input-wrapper">
-      <div class="typing-indicator" id="typingIndicator"></div>
+      <div class="typing-indicator" id="typingIndicator" style="font-size: 12px; color: var(--oy-green); height: 20px; margin-bottom: 5px;"></div>
       <form class="chat-input-form" id="chatForm" onsubmit="sendMessage(event)">
-        <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." disabled oninput="handleTyping()"/>
-        <button type="submit" disabled>전송</button>
+        <input type="text" id="messageInput" placeholder="문의내용을 입력해주세요." disabled oninput="handleTyping()"/>
+        <button type="submit" disabled>보내기</button>
       </form>
     </div>
   </div>
