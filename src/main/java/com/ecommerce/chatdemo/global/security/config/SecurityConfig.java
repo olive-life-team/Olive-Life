@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/api/auth/logout",
                                 "/ws/**"
                         ).permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

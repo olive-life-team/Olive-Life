@@ -1,5 +1,6 @@
 package com.ecommerce.chatdemo.global.socket.redis;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -7,6 +8,12 @@ import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 @Configuration
+// action build 통과용
+@ConditionalOnProperty(
+        name = "app.redis.listener.enabled",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class RedisSubscriberConfig {
 
     @Bean
