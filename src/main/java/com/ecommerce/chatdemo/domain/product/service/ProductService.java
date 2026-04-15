@@ -1,12 +1,14 @@
 package com.ecommerce.chatdemo.domain.product.service;
 
 import com.ecommerce.chatdemo.domain.product.entity.Product;
+import com.ecommerce.chatdemo.domain.product.entity.request.ProductSearchRequest;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductDetailResponse;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSummaryResponse;
 import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.global.exception.BusinessException;
 import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,5 +32,9 @@ public class ProductService {
         Product product = repository.findById(productId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         return ProductDetailResponse.from(product);
+    }
+
+    public Page<ProductSummaryResponse> search(ProductSearchRequest request) {
+        return repository.search(request);
     }
 }
