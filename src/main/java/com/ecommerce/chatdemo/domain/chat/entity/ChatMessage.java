@@ -46,18 +46,4 @@ public class ChatMessage extends BaseEntity {
         this.content = content;
         this.messageType = messageType;
     }
-
-    /*public static ChatMessage create(
-            ChatRoom room,
-            Member sender,
-            String message,
-            ChatMessageType messageType
-    ) {
-        return ChatMessage.builder()
-                .room(room)
-                .sender(sender)
-                .message(message)
-                .messageType(messageType)
-                .build();
-    }*/
 }
