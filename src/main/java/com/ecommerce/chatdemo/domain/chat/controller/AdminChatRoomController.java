@@ -7,10 +7,7 @@ import com.ecommerce.chatdemo.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -33,5 +30,17 @@ public class AdminChatRoomController {
         return ResponseEntity.ok(ApiResponse.success(adminChatRoomService.getRooms(status)));
     }
 
-    // 채팅방 상태 변경
+    /**
+     * 채팅방 상태 변경
+     * @param roomId
+     * @param status
+     * @return
+     */
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'CS_ADMIN')")
+    @PatchMapping("/{roomId}/status")
+    public ResponseEntity<ApiResponse<ChatRoomResponse>> updateStatus(
+            @PathVariable Long roomId,
+            @RequestParam ChatRoomStatus status) {
+        return ResponseEntity.ok(ApiResponse.success(adminChatRoomService.updateStatus(roomId, status)));
+    }
 }

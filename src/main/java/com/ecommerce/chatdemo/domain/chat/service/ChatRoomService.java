@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -100,5 +101,15 @@ public class ChatRoomService {
         chatRedisPublisher.publish(roomId, redisMessage);
 
         return new ChatRoomResponse(chatRoom);
+    }
+
+    // 복구 메세지 조회
+    @Transactional(readOnly = true)
+    public List<ChatMessageResponse> getMissingMessages(Long roomId, Long lastId) {
+        List<ChatMessage> messages =  chatMessageRepository.findMissedMessages(roomId, lastId);
+
+        return messages.stream()
+                .map(ChatMessageResponse::new)
+                .toList();
     }
 }

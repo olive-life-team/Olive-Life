@@ -1,5 +1,7 @@
 package com.ecommerce.chatdemo.domain.chat.entity;
 
+import com.ecommerce.chatdemo.domain.chat.exception.ChatErrorCode;
+import com.ecommerce.chatdemo.domain.chat.exception.ChatException;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -48,15 +50,11 @@ public class ChatRoom extends BaseEntity {
         this.status = ChatRoomStatus.WAITING;
     }
 
-    /*public static ChatRoom create(Member member) {
-        return ChatRoom.builder()
-                .member(member)
-                .status(ChatRoomStatus.WAITING)
-                .build();
-    }*/
-
-    public void updateStatus(ChatRoomStatus status) {
-        this.status = status;
+    public void updateStatus(ChatRoomStatus nextStatus) {
+        if (!this.status.canTransitionTo(nextStatus)) {
+            throw new ChatException(ChatErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        this.status = nextStatus;
     }
 
     public void updateAdmin(Member admin) {

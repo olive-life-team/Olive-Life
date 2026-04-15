@@ -81,4 +81,18 @@ public class ChatRoomController {
             @LoginUser LoginUserInfo loginUserInfo) {
         return ResponseEntity.ok(ApiResponse.success(chatRoomService.leaveChatRoom(roomId, loginUserInfo.id())));
     }
+
+    /**
+     * 복구 메세지 조회
+     * @param roomId
+     * @param lastId
+     * @return
+     */
+    @GetMapping("/{roomId}/recovery")
+    public ResponseEntity<ApiResponse<List<ChatMessageResponse>>> recoverMessages(
+            @PathVariable Long roomId,
+            @RequestParam Long lastId) {
+        List<ChatMessageResponse> messages = chatRoomService.getMissingMessages(roomId, lastId);
+        return ResponseEntity.ok(ApiResponse.success(messages));
+    }
 }
