@@ -1,12 +1,13 @@
 package com.ecommerce.chatdemo.domain.product.entity.response;
 
 import com.ecommerce.chatdemo.domain.product.entity.Product;
+import com.ecommerce.chatdemo.domain.product.entity.ProductStatus;
 
 public record ProductSummaryResponse(
         Long id,
         String name,
         Long price,
-        String status,
+        ProductStatus status,
         Long stock
 ) {
     public static ProductSummaryResponse from(Product product) {
@@ -14,7 +15,7 @@ public record ProductSummaryResponse(
                 product.getId(),
                 product.getName(),
                 product.getPrice(),
-                product.getStatus().name(),
+                product.getStatus(),
                 product.getStock()
         );
     }

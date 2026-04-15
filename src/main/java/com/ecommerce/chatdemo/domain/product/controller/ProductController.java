@@ -1,15 +1,14 @@
 package com.ecommerce.chatdemo.domain.product.controller;
 
+import com.ecommerce.chatdemo.domain.product.entity.request.ProductSearchRequest;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductDetailResponse;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSummaryResponse;
 import com.ecommerce.chatdemo.domain.product.service.ProductService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -32,5 +31,14 @@ public class ProductController {
             @PathVariable Long productId
     ) {
         return ResponseEntity.ok(ApiResponse.success(service.getProduct(productId)));
+    }
+
+    @GetMapping("/products/search")
+    public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> search(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
+        return ResponseEntity.ok(ApiResponse.success(service.search(request)));
     }
 }
