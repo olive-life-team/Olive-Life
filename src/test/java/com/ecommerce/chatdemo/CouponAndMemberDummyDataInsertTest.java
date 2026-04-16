@@ -24,8 +24,8 @@ class CouponAndMemberDummyDataInsertTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private static final int TARGET_MEMBER_COUNT = 300;
-    private static final int BATCH_SIZE = 100;
+    private static final int TARGET_MEMBER_COUNT = 200;
+    private static final int BATCH_SIZE = 101;
 
     private static final String DEFAULT_MEMBERSHIP_NAME = "BASIC";
     private static final String DEFAULT_PASSWORD = "Dummy!1234";
@@ -41,8 +41,15 @@ class CouponAndMemberDummyDataInsertTest {
 
     @Test
     void 사용자_200명_더미데이터_적재() {
+        // 1. ID 초기화 및 기존 데이터 전체 삭제
+        clearMemberAndMembership();
+
+        // 2. 기본 멤버십 생성 (이제 ID 1로 생성됨)
         Long membershipId = getOrCreateBasicMembershipId();
+
+        // 3. 더미 데이터 삽입
         insertDummyCustomers(membershipId);
+
         printMemberSummary();
     }
 
@@ -50,6 +57,22 @@ class CouponAndMemberDummyDataInsertTest {
     void 선착순_쿠폰_더미데이터_적재() {
         upsertScenarioCoupon();
         printCouponSummary();
+    }
+
+    private void clearMemberAndMembership() {
+        System.out.println("테이블 초기화 시작 (ID 1부터 시작하도록 설정)...");
+
+        // 외래 키 체크 해제 (MySQL/H2 기준)
+        jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
+
+        // TRUNCATE를 통해 데이터 삭제 및 AUTO_INCREMENT 초기화
+        jdbcTemplate.execute("TRUNCATE TABLE member");
+        jdbcTemplate.execute("TRUNCATE TABLE membership");
+
+        // 외래 키 체크 재설정
+        jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
+
+        System.out.println("테이블 초기화 완료.");
     }
 
     private Long getOrCreateBasicMembershipId() {
@@ -87,7 +110,7 @@ class CouponAndMemberDummyDataInsertTest {
 
     private void insertDummyCustomers(Long membershipId) {
         Set<String> existingEmails = new HashSet<>(jdbcTemplate.queryForList(
-                "select email from member where email like 'coupon-user-%@example.com'",
+                "select email from member where email like 'user%@example.com'",
                 String.class
         ));
 
@@ -107,8 +130,19 @@ class CouponAndMemberDummyDataInsertTest {
         String encodedPassword = passwordEncoder.encode(DEFAULT_PASSWORD);
         List<Object[]> batchArgs = new ArrayList<>(BATCH_SIZE);
 
+        batchArgs.add(new Object[]{
+                membershipId,
+                "admin001@example.com",
+                encodedPassword,
+                "Admin001",
+                MemberRole.CS_ADMIN.name(),
+                0L,
+                Timestamp.valueOf(LocalDateTime.now()),
+                Timestamp.valueOf(LocalDateTime.now())
+        });
+
         for (int i = 1; i <= TARGET_MEMBER_COUNT; i++) {
-            String email = String.format("coupon-user-%03d@example.com", i);
+            String email = String.format("user%03d@example.com", i);
 
             if (existingEmails.contains(email)) {
                 continue;
@@ -121,7 +155,7 @@ class CouponAndMemberDummyDataInsertTest {
                     membershipId,
                     email,
                     encodedPassword,
-                    String.format("쿠폰테스트유저%03d", i),
+                    String.format("User%03d", i),
                     MemberRole.CUSTOMER.name(),
                     0L,
                     Timestamp.valueOf(createdAt),
