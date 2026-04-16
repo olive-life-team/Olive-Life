@@ -33,12 +33,27 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(service.getProduct(productId)));
     }
 
-    @GetMapping("/products/search")
+    @GetMapping("/products/v1/search")
     public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> search(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.search(request)));
+    }
+
+    @GetMapping("/products/v2/search")
+    public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> searchInLocalCache(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
+        return ResponseEntity.ok(ApiResponse.success(service.searchInLocalCache(request)));
+    }
+
+    @DeleteMapping("/products/cache")
+    public ResponseEntity<ApiResponse<String>> clearLocalCache() {
+        service.clearLocalCache();
+        return ResponseEntity.ok(ApiResponse.success("로컬 캐시 삭제 완료"));
     }
 }
