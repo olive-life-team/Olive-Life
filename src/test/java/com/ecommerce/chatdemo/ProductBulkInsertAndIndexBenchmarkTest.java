@@ -114,41 +114,48 @@ class ProductBulkInsertAndIndexBenchmarkTest {
     }
 
     private void insertCategoriesIfNotExists() {
-        Integer count = jdbcTemplate.queryForObject(
-                "select count(*) from category where parent_id is not null",
-                Integer.class
-        );
+        Long skincare = getOrCreateParentCategoryId("스킨케어");
+        Long makeup = getOrCreateParentCategoryId("메이크업");
+        Long hair = getOrCreateParentCategoryId("헤어");
+        Long body = getOrCreateParentCategoryId("바디");
+        Long perfume = getOrCreateParentCategoryId("향수");
 
-        if (count != null && count > 0) {
-            return;
-        }
+        insertSubCategoryIfNotExists("선크림", skincare);
+        insertSubCategoryIfNotExists("토너", skincare);
+        insertSubCategoryIfNotExists("세럼", skincare);
+        insertSubCategoryIfNotExists("에센스", skincare);
+        insertSubCategoryIfNotExists("크림", skincare);
 
-        // 대분류 ID 조회
-        Long skincare = getCategoryId("스킨케어");
-        Long makeup    = getCategoryId("메이크업");
-        Long hair      = getCategoryId("헤어");
-        Long body      = getCategoryId("바디");
-        Long perfume   = getCategoryId("향수");
+        insertSubCategoryIfNotExists("립스틱", makeup);
+        insertSubCategoryIfNotExists("쿠션", makeup);
+        insertSubCategoryIfNotExists("마스크팩", makeup);
+        insertSubCategoryIfNotExists("앰플", makeup);
 
-        // 소분류 삽입
-        insertSubCategory("선크림",    skincare);
-        insertSubCategory("토너",      skincare);
-        insertSubCategory("세럼",      skincare);
-        insertSubCategory("에센스",    skincare);
-        insertSubCategory("크림",      skincare);
-        insertSubCategory("립스틱",    makeup);
-        insertSubCategory("쿠션",      makeup);
-        insertSubCategory("마스크팩",  makeup);
-        insertSubCategory("앰플",      makeup);
-        insertSubCategory("헤어에센스", hair);
-        insertSubCategory("클렌징폼",  hair);
-        insertSubCategory("바디크림",  body);
-        insertSubCategory("바디워시",  body);
-        insertSubCategory("퍼퓸",      perfume);
+        insertSubCategoryIfNotExists("헤어에센스", hair);
+        insertSubCategoryIfNotExists("클렌징폼", hair);
+
+        insertSubCategoryIfNotExists("바디크림", body);
+        insertSubCategoryIfNotExists("바디워시", body);
+
+        insertSubCategoryIfNotExists("퍼퓸", perfume);
     }
 
+    private Long getOrCreateParentCategoryId(String name) {
+        List<Long> ids = jdbcTemplate.query(
+                "select id from category where name = ? and parent_id is null",
+                (rs, rowNum) -> rs.getLong("id"),
+                name
+        );
 
-    private Long getCategoryId(String name) {
+        if (!ids.isEmpty()) {
+            return ids.get(0);
+        }
+
+        jdbcTemplate.update(
+                "insert into category (name, parent_id, created_at, modified_at) values (?, null, now(), now())",
+                name
+        );
+
         return jdbcTemplate.queryForObject(
                 "select id from category where name = ? and parent_id is null",
                 Long.class,
@@ -156,10 +163,22 @@ class ProductBulkInsertAndIndexBenchmarkTest {
         );
     }
 
-    private void insertSubCategory(String name, Long parentId) {
+    private void insertSubCategoryIfNotExists(String name, Long parentId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "select count(*) from category where name = ? and parent_id = ?",
+                Integer.class,
+                name,
+                parentId
+        );
+
+        if (count != null && count > 0) {
+            return;
+        }
+
         jdbcTemplate.update(
                 "insert into category (name, parent_id, created_at, modified_at) values (?, ?, now(), now())",
-                name, parentId
+                name,
+                parentId
         );
     }
 
@@ -167,26 +186,17 @@ class ProductBulkInsertAndIndexBenchmarkTest {
         jdbcTemplate.update("delete from product");
     }
 
-//    private void dropIndexIfExists() {
-//        try {
-//            jdbcTemplate.execute("drop index idx_product_category_status_name on product");
-//        } catch (Exception ignored) {
-//        }
-//    }
-
     private void dropIndexIfExists() {
         Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.statistics " +
-                        "WHERE table_schema = DATABASE() " +
-                        "AND table_name = 'product' " +
-                        "AND index_name = 'idx_product_category_status_name'",
+                "select count(*) from information_schema.statistics " +
+                        "where table_schema = database() " +
+                        "and table_name = 'product' " +
+                        "and index_name = 'idx_product_category_status_name'",
                 Integer.class
         );
+
         if (count != null && count > 0) {
-            try {
-                jdbcTemplate.execute("CREATE INDEX idx_product_category_id_temp ON product (category_id)");
-            } catch (Exception ignored) {}
-            jdbcTemplate.execute("DROP INDEX idx_product_category_status_name ON product");
+            jdbcTemplate.execute("drop index idx_product_category_status_name on product");
         }
     }
 
@@ -211,10 +221,10 @@ class ProductBulkInsertAndIndexBenchmarkTest {
         String suffix = PRODUCT_SUFFIXES[random.nextInt(PRODUCT_SUFFIXES.length)];
 
         String name = prefix + " " + suffix + " " + sequence;
-        int price = random.nextInt(5_000, 80_001);
-        int stock = random.nextInt(0, 301);
+        long price = random.nextLong(5_000, 80_001);
+        long stock = random.nextLong(0, 301);
         String status = stock == 0 ? "OUT_OF_STOCK" : "ON_SALE";
-        int views = random.nextInt(0, 50_000);
+        long views = random.nextLong(0, 50_000);
 
         LocalDateTime createdAt = LocalDateTime.now().minusDays(random.nextInt(0, 365));
         LocalDateTime modifiedAt = createdAt.plusMinutes(random.nextInt(0, 1440));
