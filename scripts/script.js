@@ -55,11 +55,10 @@ export default function (data) {
     const encodedKeyword = encodeURIComponent(keyword);
 
     // 환경변수 API_VER (v1, v2, v3)에 따른 엔드포인트 분기
-    // const API_VERSION = __ENV.API_VER || 'v1';
-    //const url = `http://host.docker.internal:8080/api/${API_VERSION}/products/search?keyword=${keyword}`;
+    const API_VERSION = 'v1';
     const page = 0;
     const size = 10;
-    const url = `http://host.docker.internal:8080/api/products/search?keyword=${encodedKeyword}&page=${page}&size=${size}`;
+    const url = `http://host.docker.internal:8080/api/${API_VERSION}/products/search?keyword=${encodedKeyword}&page=${page}&size=${size}`;
 
     const params = {
         headers: {
