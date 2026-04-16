@@ -62,7 +62,8 @@ public class OrderService {
                 () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
         );
         // 요청 상품이 존재하는 지 확인
-        Product product = productRepository.findById(request.getProductId()).orElseThrow(
+        // 비관적 락 도입
+        Product product = productRepository.findByIdWithLock(request.getProductId()).orElseThrow(
                 () -> new ProductException(ProductErrorCode.PRODUCT_NOT_FOUND)
         );
         // 요청 수량을 받을 수 있는 지 재고 체크
@@ -111,7 +112,9 @@ public class OrderService {
         product.decreaseStock(request.getQuantity());
 
         // 포인트 차감
-        member.decreasePointBalance(usePoints);
+        if (usePoints > 0) {
+            member.decreasePointBalance(usePoints);
+        }
 
         // 쿠폰 무효화
         if (memberCoupon != null) {
@@ -131,13 +134,26 @@ public class OrderService {
                 () -> new CartException(CartErrorCode.CART_NOT_FOUND)
         );
         // 장바구니 상품 확인
-        List<CartItem> cartItems = cartItemRepository.findByCartWithProduct(cart);
+        // 비관락 도입 하면서 findByCartWithProduct() -> findByCart() 변경
+        List<CartItem> cartItems = cartItemRepository.findByCart(cart);
         if (cartItems.isEmpty()) {
             throw new CartException(CartErrorCode.CART_EMPTY);
         }
+
+        List<Long> productIds = cartItems.stream()
+                .map(item -> item.getProduct().getId())
+                .sorted()
+                .toList();
+
+        List<Product> products = productRepository.findAllByIdWithLock(productIds);
+
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
         // 상품 재고 체크
         for (CartItem item : cartItems) {
-            item.getProduct().validateStock(item.getQuantity());
+            Product product = productMap.get(item.getProduct().getId());
+            product.validateStock(item.getQuantity());
         }
         // 총 주문 금액
         Long totalAmount = cartItems.stream()
@@ -178,8 +194,9 @@ public class OrderService {
         // 장바구니 상품 돌면서 상품이랑 수량을 리스트로 담기 -> 주문, 상품, 수량 의 리스트가 생김
         List<OrderItem> orderItems = new ArrayList<>();
         for (CartItem item : cartItems) {
+            Product product = productMap.get(item.getProduct().getId());
             // 재고 차감
-            item.getProduct().decreaseStock(item.getQuantity());
+            product.decreaseStock(item.getQuantity());
             // 주문 상품 생성
             OrderItem saveOrderItems = orderItemRepository.save(
                     OrderItem.create(order, item.getProduct(), item.getQuantity())
@@ -194,7 +211,6 @@ public class OrderService {
             memberCoupon.useCoupon(order);
         }
         // 장바구니 상품 삭제
-        //
         cartItemRepository.deleteAllInBatch(cartItems);
 
         return new OrderResponse(order, orderItems);

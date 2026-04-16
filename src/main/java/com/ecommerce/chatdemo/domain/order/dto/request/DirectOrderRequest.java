@@ -2,9 +2,11 @@ package com.ecommerce.chatdemo.domain.order.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
+@AllArgsConstructor
 public class DirectOrderRequest {
 
     @NotNull

@@ -104,7 +104,6 @@ public class Order extends BaseEntity {
                 + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    // TODO: 취소사유를 저장할지 말지?
     // 주문 취소 메서드
     public void cancel() {
         this.status = OrderStatus.CANCELED;
