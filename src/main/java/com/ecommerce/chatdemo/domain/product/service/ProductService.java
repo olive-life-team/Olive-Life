@@ -8,6 +8,8 @@ import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.global.exception.BusinessException;
 import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ProductService {
 
+    private final static String CACHE_NAME = "searchCache";
     private final ProductRepository repository;
 
     public List<ProductSummaryResponse> getProductsByCategory(Long categoryId) {
@@ -36,5 +39,21 @@ public class ProductService {
 
     public Page<ProductSummaryResponse> search(ProductSearchRequest request) {
         return repository.search(request);
+    }
+
+    @Cacheable(
+            value = CACHE_NAME,
+            key = "#request.keyword() + ':' + #request.page() + ':' + #request.size()"
+    )
+    public Page<ProductSummaryResponse> searchInLocalCache(ProductSearchRequest request) {
+        return repository.search(request);
+    }
+
+    @CacheEvict(
+            value = CACHE_NAME,
+            allEntries = true
+
+    )
+    public void clearLocalCache() {
     }
 }
