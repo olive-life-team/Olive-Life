@@ -378,8 +378,8 @@
     <div class="user-select">
       <label>로그인 계정</label>
       <select id="userSelect">
-        <option value="test1@test.com">고객 (User1)</option>
-        <option value="admin@test.com">상담사 (Admin1)</option>
+        <option value="user001@example.com">고객 (User001)</option>
+        <option value="admin001@example.com">상담사 (Admin001)</option>
       </select>
     </div>
 
@@ -452,7 +452,7 @@ let typingUsers = new Set(); // ← 현재 입력 중인 사용자들
 // ─────────────────────────────────────────────────────────
 async function init() {
   // 기본 User 1로 연결
-  await initChatTest('test3@test.com', 'Test1234!');
+  await initChatTest('user001@example.com', 'Dummy!1234');
 }
 
 async function initChatTest(email, password) {
@@ -1157,7 +1157,7 @@ document.getElementById('userSelect').addEventListener('change', async function(
   }
   
   // 새 사용자로 재연결
-  await initChatTest(email, 'Test1234!');
+  await initChatTest(email, 'Dummy!1234');
   currentRoomId = null;
   typingUsers.clear();
   clearMessages();
