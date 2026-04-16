@@ -14,6 +14,8 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 
     Optional<CartItem> findByCartAndProduct(Cart cart, Product product);
 
+    List<CartItem> findByCart(Cart cart);
+
     // N+1 방지
     // cart로 cartItem 목록 조회
     @Query("SELECT ci FROM CartItem ci JOIN FETCH ci.product WHERE ci.cart = :cart")

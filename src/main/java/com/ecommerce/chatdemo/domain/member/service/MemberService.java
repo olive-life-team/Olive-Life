@@ -27,8 +27,8 @@ import io.jsonwebtoken.security.SignatureException;
 public class MemberService {
 
     private static final String DEFAULT_MEMBERSHIP_NAME = "BASIC";
-    private static final BigDecimal DEFAULT_MIN_SPENT_AMOUNT = BigDecimal.ZERO;
-    private static final BigDecimal DEFAULT_POINT_RATE = new BigDecimal("1.00");
+    private static final Long DEFAULT_MIN_SPENT_AMOUNT = 0L;
+    private static final Long DEFAULT_POINT_RATE = 1L;
 
     private final MemberRepository memberRepository;
     private final MembershipRepository membershipRepository;

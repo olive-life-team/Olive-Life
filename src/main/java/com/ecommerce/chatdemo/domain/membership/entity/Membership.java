@@ -23,19 +23,19 @@ public class Membership extends BaseEntity {
     private String name;
 
     @Column(name = "min_spent_amount", nullable = false, precision = 15, scale = 0)
-    private BigDecimal minSpentAmount;
+    private Long minSpentAmount;
 
     @Column(name = "point_rate", nullable = false, precision = 5, scale = 2)
-    private BigDecimal pointRate;
+    private Long pointRate;
 
     @Builder
-    private Membership(String name, BigDecimal minSpentAmount, BigDecimal pointRate) {
+    private Membership(String name, Long minSpentAmount, Long pointRate) {
         this.name = name;
         this.minSpentAmount = minSpentAmount;
         this.pointRate = pointRate;
     }
 
-    public static Membership create(String name, BigDecimal minSpentAmount, BigDecimal pointRate) {
+    public static Membership create(String name, Long minSpentAmount, Long pointRate) {
         return Membership.builder()
                 .name(name)
                 .minSpentAmount(minSpentAmount)
