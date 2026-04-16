@@ -19,37 +19,40 @@ export const options = {
 // 테스트 시작 전 로그인을 수행하고 토큰을 가져오는 함수
 export function setup() {
     const loginUrl = 'http://host.docker.internal:8080/api/auth/login';
-    const payload = JSON.stringify({
-        email: 'test3@test.com',
-        password: 'Test1234!',
-    });
-
     const params = {
         headers: { 'Content-Type': 'application/json' },
     };
 
-    const res = http.post(loginUrl, payload, params);
-    const body = res.json();
+    // 100명의 더미 데이터 계정 순회
+    for (let i = 1; i <= 100; i++) {
+        const payload = JSON.stringify({
+            email: `test${i}@test.com`,
+            password: 'Test1234!',
+        });
 
-    // ApiResponse<LoginResponse> 구조에 맞춰 data 필드 접근
-    const authToken = body.data && body.data.accessToken;
+        const res = http.post(loginUrl, payload, params);
 
-    const success = check(res, {
-        'setup login success': (r) => r.status === 200,
-        'has token': () => authToken !== undefined && authToken !== null,
-    });
-
-    if (!success) {
-        throw new Error(`Login failed! Status: ${res.status}, Message: ${body.message}`);
+        if (res.status === 200) {
+            const body = res.json();
+            const authToken = body.data && body.data.accessToken;
+        }
     }
 
+    if (tokens.length === 0) {
+        throw new Error("No tokens acquired! Check if dummy members are in DB.");
+    }
+
+    console.log(`Setup complete: ${tokens.length} user tokens loaded.`);
     return { token: authToken };
 }
 
 // 테스트할 검색 키워드 목록
-const keywords = ['상품', '토너', '에센스', '앰플', '클렌징폼'];
+const keywords = ['마스크팩', '토너', '에센스', '앰플', '클렌징폼'];
 
 export default function (data) {
+    const tokenIndex = (__VU - 1) % data.token.length;
+    const currentToken = data.token[tokenIndex];
+
     // 랜덤 키워드 선택
     const keyword = keywords[Math.floor(Math.random() * keywords.length)];
     const encodedKeyword = encodeURIComponent(keyword);
@@ -63,16 +66,11 @@ export default function (data) {
     const params = {
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${data.token}`,
+            'Authorization': `Bearer ${currentToken}`,
         },
     };
 
     const res = http.get(url, params);
-
-    // 디버깅: 여전히 400이 난다면 서버가 받는 URL을 확인
-    if (res.status === 400) {
-        console.log(`[400 Error] Requested URL: ${url}`);
-    }
 
     check(res, {
         'status is 200': (r) => r.status === 200,
