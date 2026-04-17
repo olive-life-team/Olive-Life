@@ -2,6 +2,7 @@ package com.ecommerce.chatdemo.domain.product.controller;
 
 import com.ecommerce.chatdemo.domain.product.entity.request.ProductSearchRequest;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductDetailResponse;
+import com.ecommerce.chatdemo.domain.product.entity.response.ProductSearchResult;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSummaryResponse;
 import com.ecommerce.chatdemo.domain.product.service.ProductService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
@@ -18,7 +19,6 @@ import java.util.List;
 public class ProductController {
     private final ProductService service;
 
-
     @GetMapping("/categories/{categoryId}/products")
     public ResponseEntity<ApiResponse<List<ProductSummaryResponse>>> getProductsByCategory(
             @PathVariable Long categoryId
@@ -26,12 +26,14 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(service.getProductsByCategory(categoryId)));
     }
 
+
     @GetMapping("/products/{productId}")
     public ResponseEntity<ApiResponse<ProductDetailResponse>> getProduct(
             @PathVariable Long productId
     ) {
         return ResponseEntity.ok(ApiResponse.success(service.getProduct(productId)));
     }
+
 
     @GetMapping("/products/v1/search")
     public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> search(
@@ -41,6 +43,7 @@ public class ProductController {
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.search(request)));
     }
+
 
     @GetMapping("/products/v2/search")
     public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> searchInLocalCache(
@@ -56,4 +59,15 @@ public class ProductController {
         service.clearLocalCache();
         return ResponseEntity.ok(ApiResponse.success("로컬 캐시 삭제 완료"));
     }
+
+
+    @GetMapping("/products/v3/search")
+    public ResponseEntity<ApiResponse<ProductSearchResult>> searchInRedisCache(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
+        return ResponseEntity.ok(ApiResponse.success(service.searchInRedisCache(request)));
+    }
+
 }
