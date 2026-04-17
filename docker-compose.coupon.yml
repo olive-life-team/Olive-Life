@@ -1,0 +1,104 @@
+# docker-compose.coupon.yml / 분산 락 테스트
+# docker compose -f docker-compose.coupon.yml down
+# docker compose -f docker-compose.coupon.yml up -d --build
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: coupon-nginx
+    ports:
+      - "8090:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      app1:
+        condition: service_started
+      app2:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    container_name: coupon-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mysql:
+    image: mysql:8.0
+    container_name: coupon-mysql
+    environment:
+      MYSQL_DATABASE: chat_demo
+      MYSQL_USER: teampage
+      MYSQL_PASSWORD: 12345678
+      MYSQL_ROOT_PASSWORD: 12345678
+      MYSQL_ROOT_HOST: "%"
+      TZ: Asia/Seoul
+    ports:
+      - "3307:3306"
+    volumes:
+      - coupon-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p12345678"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app1:
+    build: .
+    container_name: coupon-app1
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
+      DB_URL: jdbc:mysql://mysql:3306/chat_demo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USERNAME: teampage
+      DB_PASSWORD: 12345678
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      JWT_ACCESS_TOKEN_EXPIRATION_MS: 1800000
+      JWT_REFRESH_TOKEN_EXPIRATION_MS: 1209600000
+      APP_INSTANCE_NAME: app1
+      APP_REDIS_LISTENER_ENABLED: true
+      TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  app2:
+    build: .
+    container_name: coupon-app2
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
+      DB_URL: jdbc:mysql://mysql:3306/chat_demo?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USERNAME: teampage
+      DB_PASSWORD: 12345678
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      JWT_ACCESS_TOKEN_EXPIRATION_MS: 1800000
+      JWT_REFRESH_TOKEN_EXPIRATION_MS: 1209600000
+      APP_INSTANCE_NAME: app2
+      APP_REDIS_LISTENER_ENABLED: true
+      TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Seoul
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  coupon-mysql-data:
