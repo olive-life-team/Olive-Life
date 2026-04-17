@@ -3,13 +3,14 @@ import { check, sleep } from 'k6';
 
 // 테스트 부하 설정 (Ramp-up으로 점진적 부하 증가)
 export const options = {
+    setupTimeout: '3m', // setup() 대기 시간을 3분으로 연장
     stages: [
-        { duration: '30s', target: 10 }, // 우선 10명까지 천천히 증가
-        { duration: '1m', target: 10 },  // 10명 유지
-        { duration: '30s', target: 20 }, // 20명으로 증가
-        { duration: '1m', target: 20 },  // 20명 유지
-        { duration: '30s', target: 30 }, // 30명으로 증가
-        { duration: '1m', target: 30 },
+        { duration: '30s', target: 50 }, // 우선 50명까지 천천히 증가
+        { duration: '1m', target: 50 },  // 50명 유지
+        { duration: '30s', target: 100 }, // 100명으로 증가
+        { duration: '1m', target: 100 },  // 100명 유지
+        { duration: '30s', target: 150 }, // 150명으로 증가
+        { duration: '1m', target: 150 },  // 150명 유지
         { duration: '30s', target: 0 },
     ],
     thresholds: {
@@ -27,8 +28,8 @@ export function setup() {
 
     const tokens = [];
 
-    // 50명의 더미 데이터 계정 순회
-    for (let i = 1; i <= 50; i++) {
+    // 200명의 더미 데이터 계정 순회
+    for (let i = 1; i <= 200; i++) {
         const userNumber = String(i).padStart(3, '0');
         const payload = JSON.stringify({
             email: `user${userNumber}@example.com`,
