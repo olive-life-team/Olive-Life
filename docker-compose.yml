@@ -84,6 +84,7 @@ services:
       - influxdb
     environment:
       - K6_OUT=influxdb=http://influxdb:8086/k6
+      - API_VER=${API_VER:-v1}
       # - K6_WEB_DASHBOARD=true
       # - K6_WEB_DASHBOARD_HOST=0.0.0.0
     command: run /scripts/script.js

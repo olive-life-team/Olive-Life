@@ -15,7 +15,7 @@ export const options = {
     thresholds: {
         // 현실적인 목표로 수정 (현재 54초가 나오므로 단계적으로 개선)
         http_req_failed: ['rate<0.05'],   // 에러율 5% 미만 목표
-        http_req_duration: ['p(95)<1000'], // 95% 응답속도 1초(1000ms) 이내 목표
+        http_req_duration: ['p(95)<500'], // 95% 응답속도 500ms 이내 목표
     },
 };
 
@@ -60,7 +60,8 @@ export function setup() {
 }
 
 // 테스트할 검색 키워드 목록
-const keywords = ['마스크팩', '토너', '에센스', '앰플', '클렌징폼'];
+const keywords = ["립스틱", "에센스", "토너", "세럼", "쿠션", "클렌징폼", "선크림", "마스크팩", "앰플", "크림"];
+const API_VERSION = __ENV.API_VER || 'v1';
 
 export default function (data) {
     const tokens = data.tokens;
@@ -83,11 +84,8 @@ export default function (data) {
     const keyword = keywords[Math.floor(Math.random() * keywords.length)];
     const encodedKeyword = encodeURIComponent(keyword);
 
-    // 환경변수 API_VER (v1, v2, v3)에 따른 엔드포인트 분기
-    const API_VERSION = 'v1';
-    const page = 0;
-    const size = 10;
-    const url = `http://host.docker.internal:8080/api/products/${API_VERSION}/search?keyword=${encodedKeyword}&page=${page}&size=${size}`;
+    console.log(`[Test Start] API Version: ${API_VERSION}`);
+    const url = `http://host.docker.internal:8080/api/products/${API_VERSION}/search?keyword=${encodedKeyword}&page=0&size=10`;
 
     const params = {
         headers: {
