@@ -1,21 +1,3 @@
-# docker compose 실행
-# docker compose up 명령어로 전체 실행
-# docker-compose up k6 명령어로 부하 테스트만 실행
-
-# K6 대시보드
-# 1. 아래 K6_WEB_DASHBOARD / K6_WEB_DASHBOARD_HOST 주석 풀기
-# 2. 서비스 재실행
-# 3. docker-compose up k6 명령어 실행
-# 4. localhost:5665 접속 -> 대시보드 확인
-# 5. K6 실행 결과만 보려면 localhost:5665 화면 끄기
-# 6. K6_WEB_DASHBOARD / K6_WEB_DASHBOARD_HOST 다시 주석 처리 후  서비스 재실행
-# 7. docker-compose up k6 명령어 실행 -> K6 실행 결과 터미널에 보임
-
-# Grafana 대시보드
-# 1. 서비스 실행
-# 2. localhost:3000 접속 -> 아이디=admin, 비번=admin
-# 3. ...
-
 services:
   app:
     build: .
