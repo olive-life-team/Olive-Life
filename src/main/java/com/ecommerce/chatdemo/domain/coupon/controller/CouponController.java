@@ -3,6 +3,7 @@ package com.ecommerce.chatdemo.domain.coupon.controller;
 import com.ecommerce.chatdemo.domain.coupon.dto.request.CreateCouponRequest;
 import com.ecommerce.chatdemo.domain.coupon.dto.response.CreateCouponResponse;
 import com.ecommerce.chatdemo.domain.coupon.dto.response.GetCouponResponse;
+import com.ecommerce.chatdemo.domain.coupon.dto.response.IssueCouponResponse;
 import com.ecommerce.chatdemo.domain.coupon.service.CouponService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import com.ecommerce.chatdemo.global.security.annotation.LoginUser;
@@ -16,13 +17,13 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/admin/coupons")
+@RequestMapping("/api/coupons")
 public class CouponController {
 
     private final CouponService couponService;
 
     // 관리자가 쿠폰 생성
-    @PostMapping
+    @PostMapping("/admin")
     public ResponseEntity<ApiResponse<CreateCouponResponse>> createCoupon(
             @LoginUser LoginUserInfo loginUserInfo,
             @Valid @RequestBody CreateCouponRequest request
@@ -32,7 +33,7 @@ public class CouponController {
     }
 
     // 관리자가 쿠폰 목록 조회
-    @GetMapping
+    @GetMapping("/admin")
     public ResponseEntity<ApiResponse<Page<GetCouponResponse>>> getCoupon(
             @LoginUser LoginUserInfo loginUserInfo,
             @RequestParam(required = false, defaultValue = "1") int page,
@@ -41,4 +42,24 @@ public class CouponController {
         return ResponseEntity.ok(ApiResponse.success(couponService.getCoupon(loginUserInfo.id(), page, size)));
     }
 
+    // 사용자가 쿠폰 등록
+    // 락 X
+    @PostMapping("/{couponId}/issue")
+    public ResponseEntity<ApiResponse<IssueCouponResponse>> issueCoupon(
+            @LoginUser LoginUserInfo loginUserInfo,
+            @PathVariable Long couponId
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(couponService.issueCoupon(loginUserInfo.id(), couponId)));
+    }
+
+    // 낙관락 버전
+    @PostMapping("/v2/{couponId}/issue/")
+    public ResponseEntity<ApiResponse<IssueCouponResponse>> issueCouponWithOptimisticLock(
+            @LoginUser LoginUserInfo loginUserInfo,
+            @PathVariable Long couponId
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(couponService.issueCouponWithOptimisticLock(loginUserInfo.id(), couponId)));
+    }
 }

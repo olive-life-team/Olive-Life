@@ -18,7 +18,10 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "member_coupon")
+@Table(name = "member_coupon",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"member_id", "coupon_id"})
+    })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MemberCoupon extends BaseEntity {
 
@@ -70,7 +73,7 @@ public class MemberCoupon extends BaseEntity {
         this.usedAt = usedAt;
     }
 
-    public static MemberCoupon issue(Member member, Coupon coupon) {
+    public static MemberCoupon create(Member member, Coupon coupon) {
         return MemberCoupon.builder()
                 .member(member)
                 .coupon(coupon)
