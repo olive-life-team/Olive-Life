@@ -25,12 +25,6 @@ spring:
       hibernate:
         format_sql: true
 
-  cache:
-    type: caffeine
-    cache-names: searchCache
-    caffeine:
-      spec: maximumSize=1000,expireAfterWrite=10m
-
 management:
   endpoints:
     web:
