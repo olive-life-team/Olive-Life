@@ -10,6 +10,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 @SpringBootTest
@@ -228,21 +229,37 @@ class ProductBulkInsertAndIndexBenchmarkTest {
         jdbcTemplate.update("delete from product");
     }
 
-    private void dropIndexIfExists() {
-        // 대상 인덱스 존재 여부 확인
-        Integer count = jdbcTemplate.queryForObject(
-                "select count(*) from information_schema.statistics " +
-                        "where table_schema = database() " +
-                        "and table_name = 'product' " +
-                        "and index_name = 'idx_product_category_status_name'",
-                Integer.class
-        );
 
-        // 있으면 삭제해서 before 상태를 만든다
-        if (count != null && count > 0) {
-            jdbcTemplate.execute("drop index idx_product_category_status_name on product");
+    /** dropIndexIfExists()
+     * BulkInsert를 하기 전 index를 지우는 로직이 있음
+     * P) information_schema.statistics (index를 관리하는 메타데이터)에 접근하려다보니 권한 문제가 있어서 조회를 실패!
+     * S) product 테이블의 인덱스 목록을 찾아서 지우는 방향으로 수정!
+     */
+//    private void dropIndexIfExists() {
+//        Integer count = jdbcTemplate.queryForObject(
+//                "select count(*) from information_schema.statistics " +
+//                        "where table_schema = database() " +
+//                        "and table_name = 'product' " +
+//                        "and index_name = 'idx_product_category_status_name'",
+//                Integer.class
+//        );
+//
+//        if (count != null && count > 0) {
+//            jdbcTemplate.execute("drop index idx_product_category_status_name on product");
+//        }
+//    }
+
+    private void dropIndexIfExists() {
+        List<Map<String, Object>> indexes = jdbcTemplate.queryForList(
+                "SHOW INDEX FROM product WHERE Key_name = 'idx_product_category_status_name'"
+        );
+        if (!indexes.isEmpty()) {
+            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 0");
+            jdbcTemplate.execute("DROP INDEX idx_product_category_status_name ON product");
+            jdbcTemplate.execute("SET FOREIGN_KEY_CHECKS = 1");
         }
     }
+
 
     private List<Long> findCategoryIds() {
         // 소분류 카테고리 id 목록 조회
