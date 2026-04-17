@@ -42,7 +42,8 @@ public class SecurityConfig {
                                 "/api/auth/signup",
                                 "/api/auth/login",
                                 "/api/auth/logout",
-                                "/ws/**"
+                                "/ws/**",
+                                "/api/performance/logs/**"
                         ).permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated()
