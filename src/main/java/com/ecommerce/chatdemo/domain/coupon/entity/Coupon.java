@@ -47,6 +47,10 @@ public class Coupon extends BaseEntity {
     @Column(name = "use_end_at", nullable = false)
     private LocalDateTime useEndAt;
 
+    // 낙관 락 테스트 시 주석 해제
+//    @Version
+//    private Long version;
+
     @Builder
     private Coupon(
             String name,

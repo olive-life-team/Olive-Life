@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@ActiveProfiles("test")
 @SpringBootTest
 public class OrderRaceTest {
 
@@ -115,45 +117,62 @@ public class OrderRaceTest {
 
     @AfterEach
     void tearDown() {
-        cartItemRepository.deleteAllInBatch(); // 1. 장바구니 상세 삭제
-        cartRepository.deleteAllInBatch();     // 2. 장바구니 삭제
+        orderItemRepository.deleteAll();
+        orderRepository.deleteAll();
+        cartItemRepository.deleteAll();
+        cartRepository.deleteAll();
+        memberRepository.deleteAll();
+        productRepository.deleteById(productId);
 
-        orderItemRepository.deleteAllInBatch(); // 3. 주문 상세 삭제
-        orderRepository.deleteAllInBatch();     // 4. 주문 껍데기 삭제
-
-        productRepository.deleteAllInBatch();   // 5. 상품 삭제
-        categoryRepository.deleteAllInBatch();  // 6. 카테고리 삭제
-
-        memberRepository.deleteAllInBatch();    // 7. 회원 삭제 (100명 싹 다!)
-        membershipRepository.deleteAllInBatch(); // 8. 멤버십 삭제
+        categoryRepository.deleteById(categoryId);
+        membershipRepository.deleteById(membershipId);
     }
 
     @Test
     void 즉시결제_동시성_테스트() throws InterruptedException {
-        int threadCount = 100;
-        // 100명이 동시에 작업 수행
-        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CyclicBarrier barrier = new CyclicBarrier(threadCount);
+        int poolSize = 100; // 스레드
+        int threadCount = 1000; // 트래픽
+        ExecutorService executorService = Executors.newFixedThreadPool(poolSize);
+        CyclicBarrier barrier = new CyclicBarrier(poolSize);
+        CountDownLatch latch = new CountDownLatch(threadCount);
 
         DirectOrderRequest request = new DirectOrderRequest(productId, 1, null, 0L);
         AtomicInteger successCount = new AtomicInteger(0);
 
-        Runnable task = () -> {
-            try {
-                barrier.await();
-                orderService.createDirectOrder(memberId, request);
-                successCount.incrementAndGet();
-            } catch (Exception e) {
-                System.out.println(Thread.currentThread().getName() + " 실패: " + e.getMessage());
-            }
-        };
-
+        Membership membership = membershipRepository.findById(membershipId).orElseThrow();
+        List<Long> memberIds = new ArrayList<>();
         for (int i = 0; i < threadCount; i++) {
-            executorService.submit(task);
+            Member newMember = Member.create(
+                    membership,
+                    UUID.randomUUID().toString().substring(0, 8) + "@test.com",
+                    "abc1234!",
+                    "테스트유저" + i,
+                    MemberRole.CUSTOMER
+            );
+            newMember.increasePointBalance(99999999L);
+            memberRepository.save(newMember);
+            memberIds.add(newMember.getId());
         }
 
+        for (int i = 0; i < threadCount; i++) {
+            Long currentMemberId = memberIds.get(i);
+            executorService.submit(() -> {
+                try {
+                    try {
+                        barrier.await(5, TimeUnit.SECONDS);
+                    } catch (BrokenBarrierException | TimeoutException ignored) { }
+                    orderService.createDirectOrder(currentMemberId, request);
+                    successCount.incrementAndGet();
+                } catch (Exception e) {
+                    System.out.println(Thread.currentThread().getName() + " 실패: " + e.getMessage());
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
         executorService.shutdown();
-        executorService.awaitTermination(30, TimeUnit.SECONDS);
 
         // 결과 검증
         Product product = productRepository.findById(productId).orElseThrow();
@@ -171,10 +190,12 @@ public class OrderRaceTest {
     void 장바구니_주문_동시성_테스트() throws InterruptedException {
         Membership membership = membershipRepository.findById(membershipId).orElseThrow();
         Product product = productRepository.findById(productId).orElseThrow();
-
+        int poolSize = 32;
         int threadCount = 100;
-        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
-        CyclicBarrier barrier = new CyclicBarrier(threadCount);
+        ExecutorService executorService = Executors.newFixedThreadPool(poolSize);
+        CyclicBarrier barrier = new CyclicBarrier(poolSize);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
         AtomicInteger successCount = new AtomicInteger(0);
 
         CreateOrderRequest request = new CreateOrderRequest(null, 0L);
@@ -200,19 +221,22 @@ public class OrderRaceTest {
 
             executorService.submit(() -> {
                 try {
-                    barrier.await();
+                    try {
+                        barrier.await(5, TimeUnit.SECONDS); // ← 안쪽 try
+                    } catch (BrokenBarrierException | TimeoutException ignored) { }
                     // 100명이 각자의 장바구니로 동시에 결제 시도
                     orderService.createOrder(currentMemberId, request);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     System.out.println(Thread.currentThread().getName() + " 실패: " + e.getMessage());
+                } finally {
+                    latch.countDown();
                 }
             });
         }
+        latch.await();
 
         executorService.shutdown();
-        executorService.awaitTermination(30, TimeUnit.SECONDS);
-
         // 결과 검증
         Product updatedProduct = productRepository.findById(productId).orElseThrow();
         System.out.println("===== 결과 =====");

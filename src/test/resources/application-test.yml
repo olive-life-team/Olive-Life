@@ -4,7 +4,9 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
-
+    hikari:
+      maximum-pool-size: 10    # 동시성 테스트시 커넥션 풀 설정값에 따른 변화 체크
+                                # 기본은 10 -> 병목현상이 생길 수 있음
   jpa:
     hibernate:
       ddl-auto: create-drop

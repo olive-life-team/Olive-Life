@@ -63,7 +63,7 @@ public class OrderService {
         );
         // 요청 상품이 존재하는 지 확인
         // 비관적 락 도입
-        Product product = productRepository.findByIdWithLock(request.getProductId()).orElseThrow(
+        Product product = productRepository.findById(request.getProductId()).orElseThrow(
                 () -> new ProductException(ProductErrorCode.PRODUCT_NOT_FOUND)
         );
         // 요청 수량을 받을 수 있는 지 재고 체크
