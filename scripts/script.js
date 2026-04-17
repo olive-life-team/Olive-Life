@@ -13,7 +13,6 @@ export const options = {
         { duration: '30s', target: 0 },
     ],
     thresholds: {
-        // 현실적인 목표로 수정 (현재 54초가 나오므로 단계적으로 개선)
         http_req_failed: ['rate<0.05'],   // 에러율 5% 미만 목표
         http_req_duration: ['p(95)<500'], // 95% 응답속도 500ms 이내 목표
     },
@@ -38,7 +37,6 @@ export function setup() {
 
         const res = http.post(loginUrl, payload, params);
 
-        // setup 함수 내부 수정 추천
         if (res.status === 200) {
             const resBody = res.json();
             const token = resBody.data && resBody.data.accessToken;
@@ -66,7 +64,7 @@ const API_VERSION = __ENV.API_VER || 'v1';
 export default function (data) {
     const tokens = data.tokens;
 
-    // 안전장치: 토큰이 없는 경우 요청을 보내지 않음
+    // 토큰이 없는 경우 요청을 보내지 않음
     if (!tokens || tokens.length === 0) {
         console.error("No tokens available in default function!");
         return;
