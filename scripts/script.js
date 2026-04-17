@@ -94,10 +94,24 @@ export default function (data) {
     };
 
     const res = http.get(url, params);
-
     // 실패한 요청(status 200이 아닌 경우)만 상세 로그 출력
     if (res.status !== 200) {
-        console.warn(`Request Failed! VU: ${__VU}, Status: ${res.status}, Error: ${res.error}, Response: ${res.body}`);
+        let errorDetail = "Unknown Error";
+
+        try {
+            // 1. 서버 응답 바디가 JSON인 경우 에러 메시지 추출
+            const body = JSON.parse(res.body);
+            errorDetail = body.error && body.error.message ? body.error.message : "No message in body";
+        } catch (e) {
+            // 2. JSON이 아니거나 에러인 경우 k6 에러 정보나 바디 일부 사용
+            errorDetail = res.error ? res.error : (res.body ? res.body.substring(0, 100) : "No response body");
+        }
+
+        // console.warn으로 터미널 확인
+        console.warn(`[Fail] VU: ${__VU}, Status: ${res.status}, Error: ${errorDetail}`);
+
+        // 서버의 Logback으로 상세 에러 전송
+        pushLog(`Error: ${errorDetail}`, res.status);
     }
 
     check(res, {
@@ -110,4 +124,19 @@ export default function (data) {
     });
 
     sleep(1);
+}
+
+const LOG_ENDPOINT = 'http://host.docker.internal:8080/api/performance/logs';
+
+function pushLog(message, status) {
+    const payload = JSON.stringify({
+        apiVersion: API_VERSION,
+        vu: __VU,
+        iter: __ITER,
+        msg: message,
+        status: status
+    });
+
+    // 로그 전송은 테스트 결과에 영향을 주지 않도록 가볍게 처리
+    http.post(LOG_ENDPOINT, payload, { headers: { 'Content-Type': 'application/json' } });
 }
