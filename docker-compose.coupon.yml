@@ -100,5 +100,15 @@ services:
       redis:
         condition: service_healthy
 
+  k6:
+    image: grafana/k6
+    ports:
+      - "5665:5665"
+    volumes:
+      - ./scripts:/scripts
+    environment:
+      - API_VER=${API_VER:-v1}
+    command: run /scripts/script.js
+
 volumes:
   coupon-mysql-data:
