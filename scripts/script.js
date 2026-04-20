@@ -21,7 +21,7 @@ export const options = {
 
 // 테스트 시작 전 로그인을 수행하고 토큰을 가져오는 함수
 export function setup() {
-    const loginUrl = 'http://host.docker.internal:8080/api/auth/login';
+    const loginUrl = 'http://nginx/api/auth/login';
     const params = {
         headers: { 'Content-Type': 'application/json' },
     };
@@ -84,7 +84,7 @@ export default function (data) {
     const encodedKeyword = encodeURIComponent(keyword);
 
     console.log(`[Test Start] API Version: ${API_VERSION}`);
-    const url = `http://host.docker.internal:8080/api/products/${API_VERSION}/search?keyword=${encodedKeyword}&page=0&size=10`;
+    const url = `http://nginx/api/products/${API_VERSION}/search?keyword=${encodedKeyword}&page=0&size=10`;
 
     const params = {
         headers: {
@@ -126,7 +126,7 @@ export default function (data) {
     sleep(1);
 }
 
-const LOG_ENDPOINT = 'http://host.docker.internal:8080/api/performance/logs';
+const LOG_ENDPOINT = 'http://nginx/api/performance/logs';
 
 function pushLog(message, status) {
     const payload = JSON.stringify({
