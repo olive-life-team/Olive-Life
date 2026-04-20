@@ -5,6 +5,8 @@ import com.ecommerce.chatdemo.domain.coupon.entity.CouponStatus;
 import com.ecommerce.chatdemo.domain.coupon.repository.CouponRepository;
 import com.ecommerce.chatdemo.domain.coupon.service.CouponCoreService;
 import com.ecommerce.chatdemo.domain.coupon.service.CouponService;
+import com.ecommerce.chatdemo.domain.coupon.service.LockService;
+import com.ecommerce.chatdemo.domain.coupon.service.NamedLockService;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.domain.member.entity.MemberRole;
 import com.ecommerce.chatdemo.domain.member.repository.MemberRepository;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,9 +47,14 @@ public class CouponRaceTest {
     private MemberCouponRepository memberCouponRepository;
     @Autowired
     private MembershipRepository membershipRepository;
+    @Autowired
+    private LockService lockService;
+    @Autowired
+    private NamedLockService namedLockService;
 
     private Long membershipId;
     private Long couponId;
+    private List<Long> testMemberIds = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -73,33 +81,33 @@ public class CouponRaceTest {
     @AfterEach
     void tearDown() {
         memberCouponRepository.deleteAll();
-        memberRepository.deleteAll();
+        memberRepository.deleteAllById(testMemberIds);
         couponRepository.deleteById(couponId);
         membershipRepository.deleteById(membershipId);
     }
 
-    @Test
-    void 쿠폰_락없음_동시성_테스트() throws InterruptedException {
+    // 헬퍼 메서드
+    private List<Long> createMembers(int count) {
         Membership membership = membershipRepository.findById(membershipId).orElseThrow();
-
-        int poolSize = 32;
-        int threadCount = 1000; // 1000명이 100개 쿠폰 발급 시도
-        ExecutorService executorService = Executors.newFixedThreadPool(poolSize);
-        CyclicBarrier barrier = new CyclicBarrier(poolSize);
-        CountDownLatch latch = new CountDownLatch(threadCount);
-        AtomicInteger successCount = new AtomicInteger(0);
-
-        // 1000명 멤버 미리 생성
-        List<Long> memberIds = new ArrayList<>();
-        for (int i = 0; i < threadCount; i++) {
+        for (int i = 0; i < count; i++) {
             Member member = memberRepository.save(
                     Member.create(membership,
                             UUID.randomUUID().toString().substring(0, 8) + "@test.com",
                             "pw", "유저" + i, MemberRole.CUSTOMER)
             );
-            memberIds.add(member.getId());
+            testMemberIds.add(member.getId());
         }
-        // 1000명이 동시에 쿠폰 발급 시도
+        return testMemberIds;
+    }
+    private int runConcurrentTest(List<Long> memberIds, Function<Long, ?> task)
+            throws InterruptedException {
+        int poolSize = 32; //스레트 풀
+        int threadCount = memberIds.size();
+        ExecutorService executorService = Executors.newFixedThreadPool(poolSize);
+        CyclicBarrier barrier = new CyclicBarrier(poolSize);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        AtomicInteger successCount = new AtomicInteger(0);
+
         for (int i = 0; i < threadCount; i++) {
             Long currentMemberId = memberIds.get(i);
             executorService.submit(() -> {
@@ -107,7 +115,7 @@ public class CouponRaceTest {
                     try {
                         barrier.await(5, TimeUnit.SECONDS);
                     } catch (BrokenBarrierException | TimeoutException ignored) { }
-                    couponService.issueCoupon(currentMemberId, couponId);
+                    task.apply(currentMemberId);
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     System.out.println(Thread.currentThread().getName() + " 실패: " + e.getMessage());
@@ -119,65 +127,119 @@ public class CouponRaceTest {
 
         latch.await();
         executorService.shutdown();
+        return successCount.get();
+    }
+
+    @Test
+    void 쿠폰_락없음_동시성_테스트() throws InterruptedException {
+        List<Long> memberIds = createMembers(1000); // 트래픽
+        int successCount = runConcurrentTest(memberIds,
+                memberId -> couponService.issueCoupon(memberId, couponId));
 
         Coupon coupon = couponRepository.findById(couponId).orElseThrow();
         System.out.println("===== 결과 =====");
         System.out.println("남은 수량: " + coupon.getQuantity());
-        System.out.println("발급 성공 건수: " + successCount.get());
-        System.out.println("초과 발급 건수: " + (successCount.get() - 100) + "건");
+        System.out.println("발급 성공 건수: " + successCount);
+        System.out.println("초과 발급 건수: " + (successCount - 100) + "건");
 
         assertThat(coupon.getQuantity()).isEqualTo(0);
-        assertThat(successCount.get()).isEqualTo(100);
+        assertThat(successCount).isEqualTo(100);
     }
     @Test
     void 쿠폰_낙관락_동시성_테스트() throws InterruptedException{
-        Membership membership = membershipRepository.findById(membershipId).orElseThrow();
-
-        int poolSize = 32;
-        int threadCount = 1000; // 1000명이 100개 쿠폰 발급 시도
-        ExecutorService executorService = Executors.newFixedThreadPool(poolSize);
-        CyclicBarrier barrier = new CyclicBarrier(poolSize);
-        CountDownLatch latch = new CountDownLatch(threadCount);
-        AtomicInteger successCount = new AtomicInteger(0);
-
-        // 1000명 멤버 미리 생성
-        List<Long> memberIds = new ArrayList<>();
-        for (int i = 0; i < threadCount; i++) {
-            Member member = memberRepository.save(
-                    Member.create(membership,
-                            UUID.randomUUID().toString().substring(0, 8) + "@test.com",
-                            "pw", "유저" + i, MemberRole.CUSTOMER)
-            );
-            memberIds.add(member.getId());
-        }
-        // 1000명이 동시에 쿠폰 발급 시도
-        for (int i = 0; i < threadCount; i++) {
-            Long currentMemberId = memberIds.get(i);
-            executorService.submit(() -> {
-                try {
-                    try {
-                        barrier.await(5, TimeUnit.SECONDS);
-                    } catch (BrokenBarrierException | TimeoutException ignored) { }
-                    couponCoreService.issueCouponRetry(currentMemberId, couponId);
-                    successCount.incrementAndGet();
-                } catch (Exception e) {
-                    System.out.println(Thread.currentThread().getName() + " 실패: " + e.getMessage());
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-
-        latch.await();
-        executorService.shutdown();
+        List<Long> memberIds = createMembers(1000);
+        int successCount = runConcurrentTest(memberIds,
+                memberId -> couponService.issueCouponWithOptimisticLock(memberId, couponId));
 
         Coupon coupon = couponRepository.findById(couponId).orElseThrow();
         System.out.println("===== 결과 =====");
         System.out.println("남은 수량: " + coupon.getQuantity());
-        System.out.println("발급 성공 건수: " + successCount.get());
-        System.out.println("초과 발급 건수: " + (successCount.get() - 100) + "건");
+        System.out.println("발급 성공 건수: " + successCount);
+        System.out.println("초과 발급 건수: " + (successCount - 100) + "건");
 
         assertThat(coupon.getQuantity()).isEqualTo(0);
-        assertThat(successCount.get()).isEqualTo(100);
+        assertThat(successCount).isEqualTo(100);
     }
+
+    @Test
+    void 쿠폰_비관락_동시성_테스트() throws InterruptedException{
+        List<Long> memberIds = createMembers(1000);
+        int successCount = runConcurrentTest(memberIds,
+                memberId -> couponService.issueCouponWithPessimisticLock(memberId, couponId));
+
+        Coupon coupon = couponRepository.findById(couponId).orElseThrow();
+        System.out.println("===== 결과 =====");
+        System.out.println("남은 수량: " + coupon.getQuantity());
+        System.out.println("발급 성공 건수: " + successCount);
+        System.out.println("초과 발급 건수: " + (successCount - 100) + "건");
+
+        assertThat(coupon.getQuantity()).isEqualTo(0);
+        assertThat(successCount).isEqualTo(100);
+    }
+
+    // 네임드 락은 MySQL로 테스트해야함
+    // @ActiveProfiles("test") 주석처리하고 테스트
+    @Test
+    void 쿠폰_네임드락_동시성_테스트() throws InterruptedException {
+        List<Long> memberIds = createMembers(1000);
+        int successCount = runConcurrentTest(memberIds,
+                memberId -> namedLockService.issueCouponWithNamedLock(memberId, couponId));
+
+        Coupon coupon = couponRepository.findById(couponId).orElseThrow();
+        System.out.println("===== 결과 =====");
+        System.out.println("남은 수량: " + coupon.getQuantity());
+        System.out.println("발급 성공 건수: " + successCount);
+        System.out.println("초과 발급 건수: " + (successCount - 100) + "건");
+
+        assertThat(coupon.getQuantity()).isEqualTo(0);
+        assertThat(successCount).isEqualTo(100);
+    }
+
+    @Test
+    void 쿠폰_분산락_동시성_테스트_FailFast() throws InterruptedException{
+        List<Long> memberIds = createMembers(1000);
+        int successCount = runConcurrentTest(memberIds,
+                memberId -> lockService.issueCouponWithRedisLock(memberId, couponId));
+
+        Coupon coupon = couponRepository.findById(couponId).orElseThrow();
+        System.out.println("===== 결과 =====");
+        System.out.println("남은 수량: " + coupon.getQuantity());
+        System.out.println("발급 성공 건수: " + successCount);
+
+        assertThat(coupon.getQuantity()).isEqualTo(0);
+        assertThat(successCount).isEqualTo(100);
+    }
+
+    @Test
+    void 쿠폰_분산락_동시성_테스트_Retry() throws InterruptedException {
+        List<Long> memberIds = createMembers(1000);
+        int successCount = runConcurrentTest(memberIds,
+                memberId -> lockService.issueCouponWithRedisLockWithRetry(memberId, couponId));
+
+        Coupon coupon = couponRepository.findById(couponId).orElseThrow();
+        System.out.println("===== 결과 =====");
+        System.out.println("남은 수량: " + coupon.getQuantity());
+        System.out.println("발급 성공 건수: " + successCount);
+
+        assertThat(coupon.getQuantity()).isEqualTo(0);
+        assertThat(successCount).isEqualTo(100);
+    }
+
+    @Test
+    void 쿠폰_분산락_동시성_테스트_Blocking() throws InterruptedException {
+        List<Long> memberIds = createMembers(1000);
+        int successCount = runConcurrentTest(memberIds,
+                memberId -> lockService.issueCouponWithRedisLockWithBlocking(memberId, couponId));
+
+        Coupon coupon = couponRepository.findById(couponId).orElseThrow();
+        System.out.println("===== 결과 =====");
+        System.out.println("남은 수량: " + coupon.getQuantity());
+        System.out.println("발급 성공 건수: " + successCount);
+
+        assertThat(coupon.getQuantity()).isEqualTo(0);
+        assertThat(successCount).isEqualTo(100);
+    }
+
+
+
 }
