@@ -14,7 +14,7 @@ public class CouponCoreService {
 
     public void issueCouponRetry(Long memberId, Long couponId) {
         int retry = 0;
-        while (retry < 10) {
+        while (retry < 5) {
             try {
                 couponService.issueCouponWithOptimisticLock(memberId, couponId);
                 return;
@@ -22,7 +22,7 @@ public class CouponCoreService {
                 retry++;
                 System.out.println("충돌 발생, 재시도: " + retry);
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(70);
                 }catch (InterruptedException ignored) {
                 }
             }
