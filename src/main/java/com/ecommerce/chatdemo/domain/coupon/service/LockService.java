@@ -24,7 +24,7 @@ public class LockService {
         String lockValue = UUID.randomUUID().toString();
 
         // 락 획득 시도
-        if (!lockRedisRepository.tryLock(lockKey, lockValue, 3)) {
+        if (!lockRedisRepository.tryLock(lockKey, lockValue, 2)) {
             throw new LockAcquisitionException("잠시 후 다시 시도해 주세요.");
         }
 
@@ -44,20 +44,20 @@ public class LockService {
 
         int retry = 0;
 
-        while (retry < 10) {
+        while (retry < 8) {
             // 락 획득 시도
-            if (lockRedisRepository.tryLock(lockKey, lockValue, 3)) {
+            if (lockRedisRepository.tryLock(lockKey, lockValue, 2)) {
                 try {
                     return couponService.issueCoupon(memberId, couponId);
                 } finally {
                     lockRedisRepository.releaseLock(lockKey, lockValue);
                 }
             }
-            // 실패시 50ms 대기 후 재시도
-            // 50ms * 10번 = 500ms -> TTL 3초 안에 충분히 재시도 가능
+            // 실패시 70ms 대기 후 재시도
+            // 70ms * 8번 = 560ms -> TTL 2초 안에 충분히 재시도 가능
             retry++;
             try {
-                Thread.sleep(50);
+                Thread.sleep(70);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new CouponException(CouponErrorCode.COUPON_ISSUE_FAILED);
@@ -73,9 +73,12 @@ public class LockService {
         String lockKey = "lock:coupon:" + couponId;
         String lockValue = UUID.randomUUID().toString();
 
-        // 락이 해제될 때까지 계속 시도
-        while (true) {
-            if (lockRedisRepository.tryLock(lockKey, lockValue, 3)) {
+        // 최대 대기 시간 설정 (TTL과 동일하게)
+        long deadLine = System.currentTimeMillis() + 2000;
+
+        // 최대 대기 시간 내에서 락이 해제될 때까지 계속 시도
+        while (System.currentTimeMillis() < deadLine) {
+            if (lockRedisRepository.tryLock(lockKey, lockValue, 2)) {
                 try {
                     return couponService.issueCoupon(memberId, couponId);
                 } finally {
@@ -90,5 +93,7 @@ public class LockService {
                 throw new CouponException(CouponErrorCode.COUPON_ISSUE_FAILED);
             }
         }
+        // 최대 대기 시간 초과 시 예외 반환
+        throw new CouponException(CouponErrorCode.COUPON_ISSUE_FAILED);
     }
 }
