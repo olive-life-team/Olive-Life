@@ -10,15 +10,21 @@ import com.ecommerce.chatdemo.global.exception.BusinessException;
 import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.data.domain.Page;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,6 +32,7 @@ import java.util.Map;
 public class ProductController {
     private final ProductService service;
     private final CacheManager caffeineCacheManager;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @GetMapping("/categories/{categoryId}/products")
     public ResponseEntity<ApiResponse<List<ProductSummaryResponse>>> getProductsByCategory(
@@ -47,7 +54,11 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> search(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest
+    ) {
+        incrementScore(keyword, httpRequest.getRemoteAddr());
+
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.search(request)));
     }
@@ -57,7 +68,11 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> searchInLocalCache(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest
+    ) {
+        incrementScore(keyword, httpRequest.getRemoteAddr());
+
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.searchInLocalCache(request)));
     }
@@ -90,11 +105,44 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductSearchResult>> searchInRedisCache(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest
+    ) {
+        incrementScore(keyword, httpRequest.getRemoteAddr());
+
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.searchInRedisCache(request)));
     }
 
 
+    @GetMapping("/products/v3/search/popular")
+    public ResponseEntity<ApiResponse<List<String>>> getPopularKeywords(
+            @RequestParam(defaultValue = "0") int start,
+            @RequestParam(defaultValue = "9") int end
+    ) {
+        Set<Object> result = redisTemplate.opsForZSet()
+                .reverseRange(getTodayKey(), start, end);
+
+        List<String> keywords = result != null ? result.stream().map(Object::toString).toList() : Collections.emptyList();
+        return ResponseEntity.ok(ApiResponse.success(keywords));
+    }
+
+
+    private void incrementScore(String keyword, String ip) {
+        String dedupeKey = "search:dedup:" + ip + ":" + keyword + ":" + LocalDate.now();
+
+        Boolean isFirst = redisTemplate.opsForValue()
+                .setIfAbsent(dedupeKey, "1", 1L, TimeUnit.DAYS);
+        if (Boolean.TRUE.equals(isFirst)) {
+            redisTemplate.opsForZSet().incrementScore(getTodayKey(), keyword, 1);
+            redisTemplate.expire(getTodayKey(), 7, TimeUnit.DAYS);
+        }
+
+
+    }
+
+    private String getTodayKey() {
+        return "popular:keywords:" + LocalDate.now();
+    }
 
 }
