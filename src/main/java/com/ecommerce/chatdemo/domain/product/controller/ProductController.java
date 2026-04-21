@@ -14,11 +14,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.data.domain.Page;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ import java.util.Map;
 public class ProductController {
     private final ProductService service;
     private final CacheManager caffeineCacheManager;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @GetMapping("/categories/{categoryId}/products")
     public ResponseEntity<ApiResponse<List<ProductSummaryResponse>>> getProductsByCategory(
@@ -48,6 +52,7 @@ public class ProductController {
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        redisTemplate.opsForZSet().incrementScore("popular:keywords", keyword, 1);
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.search(request)));
     }
@@ -58,6 +63,7 @@ public class ProductController {
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        redisTemplate.opsForZSet().incrementScore("popular:keywords", keyword, 1);
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.searchInLocalCache(request)));
     }
@@ -91,10 +97,23 @@ public class ProductController {
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+        redisTemplate.opsForZSet().incrementScore("popular:keywords", keyword, 1);
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.searchInRedisCache(request)));
     }
 
+
+    @GetMapping("/products/v3/search/popular")
+    public ResponseEntity<ApiResponse<List<String>>> getPopularKeywords(
+            @RequestParam(defaultValue = "0") int start,
+            @RequestParam(defaultValue = "9") int end
+    ) {
+        Set<Object> result = redisTemplate.opsForZSet()
+                .reverseRange("popular:keywords", start, end);
+
+        List<String> keywords = result != null ? result.stream().map(Object::toString).toList() : Collections.emptyList();
+        return ResponseEntity.ok(ApiResponse.success(keywords));
+    }
 
 
 }
