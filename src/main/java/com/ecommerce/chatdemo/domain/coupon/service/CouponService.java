@@ -10,16 +10,11 @@ import com.ecommerce.chatdemo.domain.coupon.entity.CouponStatus;
 import com.ecommerce.chatdemo.domain.coupon.exception.CouponErrorCode;
 import com.ecommerce.chatdemo.domain.coupon.exception.CouponException;
 import com.ecommerce.chatdemo.domain.coupon.repository.CouponRepository;
-import com.ecommerce.chatdemo.domain.coupon.repository.LockRedisRepository;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
-import com.ecommerce.chatdemo.domain.member.entity.MemberRole;
 import com.ecommerce.chatdemo.domain.member.repository.MemberRepository;
 import com.ecommerce.chatdemo.domain.membercoupon.entity.MemberCoupon;
 import com.ecommerce.chatdemo.domain.membercoupon.repository.MemberCouponRepository;
-import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
-import com.ecommerce.chatdemo.global.exception.BusinessException;
-import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
-import com.ecommerce.chatdemo.global.exception.LockAcquisitionException;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -42,17 +36,7 @@ public class CouponService {
 
     // 관리자가 쿠폰 생성
     @Transactional
-    public CreateCouponResponse createCoupon(Long memberId, CreateCouponRequest request) {
-
-        // TODO: RBAC 도입시 리팩토링 필요
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new BusinessException(AuthErrorCode.USER_NOT_FOUND)
-        );
-        // 멤버의 역할이 고객이면 권한 에러
-        if (member.getRole().equals(MemberRole.CUSTOMER)) {
-            throw new BusinessException(CommonErrorCode.FORBIDDEN);
-        }
-
+    public CreateCouponResponse createCoupon(CreateCouponRequest request) {
         Coupon coupon = Coupon.create(
                 request.getCouponName(),
                 request.getDiscountAmount(),
@@ -73,17 +57,7 @@ public class CouponService {
     }
 
     // 관리자가 쿠폰 목록 조회
-    public Page<GetCouponResponse> getCoupon(Long memberId, int page, int size) {
-
-        // TODO: RBAC 도입시 리팩토링 필요
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new BusinessException(AuthErrorCode.USER_NOT_FOUND)
-        );
-        // 멤버의 역할이 고객이면 권한 에러
-        if (member.getRole().equals(MemberRole.CUSTOMER)) {
-            throw new BusinessException(CommonErrorCode.FORBIDDEN);
-        }
-
+    public Page<GetCouponResponse> getCoupon(int page, int size) {
         Pageable pageable = PageRequest.of(page-1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Page<Coupon> coupons = couponRepository.findAll(pageable);
@@ -95,7 +69,7 @@ public class CouponService {
     public Page<GetMemberCouponResponse> getMemberCoupon(Long memberId, int page, int size) {
         Pageable pageable = PageRequest.of(page-1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        return memberCouponRepository.findByMemberId(memberId, pageable) // N+1 방지
+        return memberCouponRepository.findByMemberIdWithPage(memberId, pageable) // N+1 방지
                 .map(GetMemberCouponResponse::new);
     }
 
@@ -159,7 +133,7 @@ public class CouponService {
     public IssueCouponResponse issueCouponWithPessimisticLock(Long memberId, Long couponId) {
         Member member = memberRepository.getReferenceById(memberId);
 
-        Coupon coupon = couponRepository.findByIdWithLcok(couponId).orElseThrow(
+        Coupon coupon = couponRepository.findByIdWithLock(couponId).orElseThrow(
                 () -> new CouponException(CouponErrorCode.COUPON_NOT_FOUND)
         );
         // 쿠폰 발급 기간이 맞는 지

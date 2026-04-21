@@ -12,7 +12,6 @@ import com.ecommerce.chatdemo.domain.membercoupon.entity.MemberCoupon;
 import com.ecommerce.chatdemo.domain.membercoupon.exception.MemberCouponErrorCode;
 import com.ecommerce.chatdemo.domain.membercoupon.exception.MemberCouponException;
 import com.ecommerce.chatdemo.domain.membercoupon.repository.MemberCouponRepository;
-import com.ecommerce.chatdemo.domain.order.dto.request.CancelOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.CreateOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.DirectOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.response.CancelOrderResponse;
@@ -58,12 +57,10 @@ public class OrderService {
     // 즉시 결제(장바구니X)
     @Transactional
     public OrderResponse createDirectOrder(Long memberId, DirectOrderRequest request) {
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
-        );
+        Member member = getMember(memberId);
         // 요청 상품이 존재하는 지 확인
         // 비관적 락 도입
-        Product product = productRepository.findById(request.getProductId()).orElseThrow(
+        Product product = productRepository.findByIdWithLock(request.getProductId()).orElseThrow(
                 () -> new ProductException(ProductErrorCode.PRODUCT_NOT_FOUND)
         );
         // 요청 수량을 받을 수 있는 지 재고 체크
@@ -126,9 +123,7 @@ public class OrderService {
     // 주문 생성 (장바구니 구매)
     @Transactional
     public OrderResponse createOrder(Long memberId, CreateOrderRequest request) {
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
-        );
+        Member member = getMember(memberId);
         // 장바구니 존재 확인
         Cart cart = cartRepository.findByMemberId(memberId).orElseThrow(
                 () -> new CartException(CartErrorCode.CART_NOT_FOUND)
@@ -218,9 +213,6 @@ public class OrderService {
 
     // 주문 목록 조회
     public List<GetOrderResponse> getOrders(Long memberId) {
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
-        );
         List<Order> orders = orderRepository.findByMemberId(memberId);
 
         // WHERE IN 으로 한 번에 모든 OrderItem 조회
@@ -241,9 +233,6 @@ public class OrderService {
 
     // 주문 상세 조회
     public OrderResponse getOneOrder(Long memberId, Long orderId) {
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
-        );
         // order 조회시 member도 같이 조회 -> N+1 방지
         Order order = orderRepository.findByIdWithMember(orderId).orElseThrow(
                 () -> new OrderException(OrderErrorCode.ORDER_NOT_FOUND)
@@ -260,10 +249,8 @@ public class OrderService {
 
     // 주문 취소 (환불)
     @Transactional
-    public CancelOrderResponse cancelOrder(Long memberId, Long orderId, CancelOrderRequest request) {
-        Member member = memberRepository.findById(memberId).orElseThrow(
-                () -> new AuthException(AuthErrorCode.USER_NOT_FOUND)
-        );
+    public CancelOrderResponse cancelOrder(Long memberId, Long orderId) {
+        Member member = getMember(memberId);
         // order 조회시 member도 같이 조회 -> N+1 방지
         Order order = orderRepository.findByIdWithMember(orderId).orElseThrow(
                 () -> new OrderException(OrderErrorCode.ORDER_NOT_FOUND)
@@ -294,5 +281,10 @@ public class OrderService {
             memberCoupon.get().restoreCoupon();
         }
         return new CancelOrderResponse(order);
+    }
+
+    private Member getMember(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new AuthException(AuthErrorCode.USER_NOT_FOUND));
     }
 }
