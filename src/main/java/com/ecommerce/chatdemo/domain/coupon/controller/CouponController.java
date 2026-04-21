@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -30,23 +31,23 @@ public class CouponController {
     private final RedissonService redissonService;
 
     // 관리자가 쿠폰 생성
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @PostMapping("/admin")
     public ResponseEntity<ApiResponse<CreateCouponResponse>> createCoupon(
-            @LoginUser LoginUserInfo loginUserInfo,
             @Valid @RequestBody CreateCouponRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(couponService.createCoupon(loginUserInfo.id(), request)));
+                .body(ApiResponse.success(couponService.createCoupon(request)));
     }
 
     // 관리자가 쿠폰 목록 조회
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @GetMapping("/admin")
     public ResponseEntity<ApiResponse<Page<GetCouponResponse>>> getCoupon(
-            @LoginUser LoginUserInfo loginUserInfo,
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "10") int size
     ) {
-        return ResponseEntity.ok(ApiResponse.success(couponService.getCoupon(loginUserInfo.id(), page, size)));
+        return ResponseEntity.ok(ApiResponse.success(couponService.getCoupon(page, size)));
     }
 
     // 사용자가 쿠폰 목록 조회

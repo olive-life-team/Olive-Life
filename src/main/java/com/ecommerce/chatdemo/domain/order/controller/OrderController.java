@@ -1,6 +1,5 @@
 package com.ecommerce.chatdemo.domain.order.controller;
 
-import com.ecommerce.chatdemo.domain.order.dto.request.CancelOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.CreateOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.request.DirectOrderRequest;
 import com.ecommerce.chatdemo.domain.order.dto.response.CancelOrderResponse;
@@ -65,9 +64,8 @@ public class OrderController {
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<CancelOrderResponse>> cancelOrder(
             @LoginUser LoginUserInfo loginUserInfo,
-            @PathVariable Long orderId,
-            @RequestBody CancelOrderRequest request
+            @PathVariable Long orderId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(loginUserInfo.id(), orderId, request)));
+        return ResponseEntity.ok(ApiResponse.success(orderService.cancelOrder(loginUserInfo.id(), orderId)));
     }
 }

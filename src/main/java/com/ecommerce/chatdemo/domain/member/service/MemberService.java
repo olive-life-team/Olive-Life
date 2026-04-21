@@ -3,6 +3,7 @@ package com.ecommerce.chatdemo.domain.member.service;
 import com.ecommerce.chatdemo.domain.member.dto.*;
 import com.ecommerce.chatdemo.domain.member.entity.Member;
 import com.ecommerce.chatdemo.domain.member.repository.MemberRepository;
+import com.ecommerce.chatdemo.domain.membercoupon.repository.MemberCouponRepository;
 import com.ecommerce.chatdemo.domain.membership.entity.Membership;
 import com.ecommerce.chatdemo.domain.membership.repository.MembershipRepository;
 import com.ecommerce.chatdemo.global.exception.AuthErrorCode;
@@ -18,7 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.util.List;
+
 import io.jsonwebtoken.security.SignatureException;
 
 @Service
@@ -35,6 +37,7 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final TokenBlacklistService tokenBlacklistService;
+    private final MemberCouponRepository memberCouponRepository;
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
@@ -86,13 +89,26 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new AuthException(AuthErrorCode.USER_NOT_FOUND));
 
+        List<MyInfoResponse.CouponInfo> coupons = memberCouponRepository.findByMemberId(memberId)
+                .stream()
+                .map(mc -> new MyInfoResponse.CouponInfo(
+                        mc.getId(),
+                        mc.getCoupon().getName(),
+                        mc.getCoupon().getDiscountAmount(),
+                        mc.getStatus(),
+                        mc.getCoupon().getUseStartAt(),
+                        mc.getCoupon().getUseEndAt()
+                ))
+                .toList();
+
         return new MyInfoResponse(
                 member.getId(),
                 member.getEmail(),
                 member.getName(),
                 member.getRole().name(),
                 member.getPointBalance(),
-                member.getMembership().getName()
+                member.getMembership().getName(),
+                coupons
         );
     }
 
