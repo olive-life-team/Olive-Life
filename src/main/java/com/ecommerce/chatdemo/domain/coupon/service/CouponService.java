@@ -39,7 +39,6 @@ public class CouponService {
     private final CouponRepository couponRepository;
     private final MemberRepository memberRepository;
     private final MemberCouponRepository memberCouponRepository;
-    private final LockRedisRepository lockRedisRepository;
 
     // 관리자가 쿠폰 생성
     @Transactional

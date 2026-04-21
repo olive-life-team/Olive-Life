@@ -65,6 +65,11 @@ dependencies {
     implementation 'org.apache.commons:commons-pool2'
 
     /*
+     * Redisson 사용용
+     */
+    implementation 'org.redisson:redisson-spring-boot-starter:3.27.2'
+
+    /*
      * 캐시 기능용
      */
     implementation 'org.springframework.boot:spring-boot-starter-cache'

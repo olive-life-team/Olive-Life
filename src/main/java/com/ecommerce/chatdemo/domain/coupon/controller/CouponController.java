@@ -8,6 +8,7 @@ import com.ecommerce.chatdemo.domain.coupon.dto.response.IssueCouponResponse;
 import com.ecommerce.chatdemo.domain.coupon.service.CouponService;
 import com.ecommerce.chatdemo.domain.coupon.service.LockService;
 import com.ecommerce.chatdemo.domain.coupon.service.NamedLockService;
+import com.ecommerce.chatdemo.domain.coupon.service.RedissonService;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import com.ecommerce.chatdemo.global.security.annotation.LoginUser;
 import com.ecommerce.chatdemo.global.security.dto.LoginUserInfo;
@@ -26,6 +27,7 @@ public class CouponController {
     private final CouponService couponService;
     private final LockService lockService;
     private final NamedLockService namedLockService;
+    private final RedissonService redissonService;
 
     // 관리자가 쿠폰 생성
     @PostMapping("/admin")
@@ -126,5 +128,15 @@ public class CouponController {
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(lockService.issueCouponWithRedisLockWithBlocking(loginUserInfo.id(), couponId)));
+    }
+
+    // Redisson 적용
+    @PostMapping("/redisson/{couponId}/issue")
+    public ResponseEntity<ApiResponse<IssueCouponResponse>> issueCouponWithRedisson(
+            @LoginUser LoginUserInfo loginUserInfo,
+            @PathVariable Long couponId
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(redissonService.issueCouponWithRedisson(loginUserInfo.id(), couponId)));
     }
 }

@@ -20,7 +20,7 @@ public class NamedLockService {
 
         try {
             // 락 획득 시도
-            Integer result = namedLockRepository.getLock(lockName, 3);
+            Integer result = namedLockRepository.getLock(lockName, 2);
 
             // result = null || result ! = 1 이라는 건, 락 획득 못했다 -> 이미 처리중인 락이 있다는 것
             if (result == null || result != 1) {
