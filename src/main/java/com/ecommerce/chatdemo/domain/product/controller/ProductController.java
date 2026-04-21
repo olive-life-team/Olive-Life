@@ -10,6 +10,7 @@ import com.ecommerce.chatdemo.global.exception.BusinessException;
 import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCache;
@@ -53,8 +54,10 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> search(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        incrementScore(keyword);
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest
+    ) {
+        incrementScore(keyword, httpRequest.getRemoteAddr());
 
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.search(request)));
@@ -65,8 +68,10 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Page<ProductSummaryResponse>>> searchInLocalCache(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        incrementScore(keyword);
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest
+    ) {
+        incrementScore(keyword, httpRequest.getRemoteAddr());
 
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.searchInLocalCache(request)));
@@ -100,8 +105,10 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductSearchResult>> searchInRedisCache(
             @RequestParam String keyword,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        incrementScore(keyword);
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest
+    ) {
+        incrementScore(keyword, httpRequest.getRemoteAddr());
 
         ProductSearchRequest request = new ProductSearchRequest(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success(service.searchInRedisCache(request)));
@@ -121,9 +128,17 @@ public class ProductController {
     }
 
 
-    private void incrementScore(String keyword) {
-        redisTemplate.opsForZSet().incrementScore(getTodayKey(), keyword, 1);
-        redisTemplate.expire(getTodayKey(), 7, TimeUnit.DAYS);
+    private void incrementScore(String keyword, String ip) {
+        String dedupeKey = "search:dedup:" + ip + ":" + keyword + ":" + LocalDate.now();
+
+        Boolean isFirst = redisTemplate.opsForValue()
+                .setIfAbsent(dedupeKey, "1", 1L, TimeUnit.DAYS);
+        if (Boolean.TRUE.equals(isFirst)) {
+            redisTemplate.opsForZSet().incrementScore(getTodayKey(), keyword, 1);
+            redisTemplate.expire(getTodayKey(), 7, TimeUnit.DAYS);
+        }
+
+
     }
 
     private String getTodayKey() {
