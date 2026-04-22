@@ -14,7 +14,8 @@ import java.util.concurrent.TimeUnit;
 @EnableCaching
 public class CaffeineCacheConfig {
 
-    public final static String CACHE_NAME = "searchCache";
+    public final static String V2_CACHE_NAME = "v2-searchCache";
+    public final static String V4_CACHE_NAME = "v4-searchCache";
     private static final long MAXIMUM_SIZE = 1000;
     private static final long DURATION = 10;
 
@@ -22,7 +23,7 @@ public class CaffeineCacheConfig {
     @Primary    // @Primary : @Cacheable 에서 Manager지정을 default로함.
     @Bean
     public CacheManager caffeineCacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager(CACHE_NAME);
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager(V2_CACHE_NAME, V4_CACHE_NAME);
         cacheManager.setCaffeine(
                 Caffeine.newBuilder()
                         .maximumSize(MAXIMUM_SIZE)
