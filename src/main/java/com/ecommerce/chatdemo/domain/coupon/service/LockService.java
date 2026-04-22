@@ -53,17 +53,17 @@ public class LockService {
                     lockRedisRepository.releaseLock(lockKey, lockValue);
                 }
             }
-            // 실패시 70ms 대기 후 재시도
-            // 70ms * 8번 = 560ms -> TTL 2초 안에 충분히 재시도 가능
+            // 실패시 50ms 대기 후 재시도
+            // 50ms * 8번 = 400ms -> TTL 2초 안에 충분히 재시도 가능
             retry++;
             try {
-                Thread.sleep(70);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new CouponException(CouponErrorCode.COUPON_ISSUE_FAILED);
             }
         }
-        // 재시도 10번 넘어가면 에러
+        // 재시도 8번 넘어가면 에러
         throw new CouponException(CouponErrorCode.COUPON_ISSUE_FAILED);
     }
 

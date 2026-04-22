@@ -39,14 +39,14 @@
 
 ## ✅ 요구사항 반영 요약
 
-| 구분 | 구현 내용 | 비고 |
-|---|---|---|
-| 동시성 제어 | [최종 선택한 락 방식 입력] | [예: Redis Lock / 비관적 락 비교 포함] |
-| 캐싱 | 검색 API v1 / v2 / v3 구성 | v1: DB 직접 조회 / v2: Local Cache / v3: Redis Cache |
-| 인기 검색어 | [구현 여부 및 방식 입력] | [예: Redis ZSet] |
-| 인덱스 최적화 | 병목 쿼리 선정 및 EXPLAIN 비교 | Before / After 정리 |
-| 실시간 채팅 | WebSocket + STOMP + Redis Pub/Sub | JWT 인증 포함 |
-| 배포 / CI | Docker, AWS, GitHub Actions | CI / CD 자동화 |
+| 구분 | 구현 내용                             | 비고                                               |
+|---|-----------------------------------|--------------------------------------------------|
+| 동시성 제어 | 낙관적 락, 비관적 락, MySQL 락, Redis 분산락  | 성능비교                                             |
+| 캐싱 | 검색 API v1 / v2 / v3 구성            | v1: DB 직접 조회 / v2: Local Cache / v3: Redis Cache |
+| 인기 검색어 | [구현 여부 및 방식 입력]                   | [예: Redis ZSet]                                  |
+| 인덱스 최적화 | 병목 쿼리 선정 및 EXPLAIN 비교             | Before / After 정리                                |
+| 실시간 채팅 | WebSocket + STOMP + Redis Pub/Sub | JWT 인증 포함                                        |
+| 배포 / CI | Docker, AWS, GitHub Actions       | CI / CD 자동화                                      |
 
 ---
 
@@ -57,12 +57,14 @@
 | 최길중 | 팀장 / 인프라 | Git 초기 세팅, Docker 환경 구성, CI/CD 구축 |
 | 김소현 | [역할] | [담당 기능] |
 | 박영수 | [역할] | [담당 기능] |
-| 이승현 | [역할] | [담당 기능] |
+| 이승현 | 동시성  | 장바구니, 주문, 쿠폰, 동시성 테스트 |
 
 ### 📎 프로젝트 문서
 - [프로젝트 노션](https://www.notion.so/teamsparta/3-3332dc3ef51480eb9e10eaaa7c65907f?source=copy_link)
 - [API 명세서](링크 입력)
 - [테스트 케이스](링크 입력)
+- 동시성 테스트 시나리오: https://www.notion.so/teamsparta/34a2dc3ef51480f68a06e1a93ec6949b?source=copy_link
+- 부하 테스트 시나리오: [링크 입력]
 
 ---
 
@@ -238,22 +240,27 @@
 - `ExecutorService`, `CyclicBarrier`, `CountDownLatch`를 사용하여 동시 출발 및 전체 완료 시점을 제어했습니다.
 
 #### 최종 선택한 락 방식
-- `[최종 락 방식 입력]`
+- Redis 분산 락 (Retry with Backoff 전략)
 
 #### 선택 이유
-- `[왜 이 락 방식을 최종 선택했는지 입력]`
-- `[비관적 락 / 낙관적 락 / Redis Lock 비교 요약 입력]`
+ 대규모 트래픽 환경에서 DB 자원을 보호하면서도 '쿠폰 전량 소진' 이라는 비즈니스 요구사항을 충족하기 위해 선택.(Scale-out 환경까지 대응 가능)
+- 낙관적 락 : 정합성은 보장되나, 극심한 경합 환경에서 롤백 및 `재시도 폭증`으로 인한 성능 저하 및 서버 부하 발생.
+- 비관적 락 : 성능은 우수하나, `DB 커넥션 점유`로 인한 서비스 장애의 위험 존재.
+- MySQL 네임드 락 : 분산락과 같은 기능을 하지만, `커넥션 2개`를 사용한다는 치명적 단점 존재.
 
 #### 락 설계
-- 락 키: `[추가 예정]`
-- TTL: `[추가 예정]`
-- 실패 전략: `[즉시 실패 / 재시도 / backoff 등 입력]`
-- 안전한 해제 방식: `[UUID / Lua Script 사용 여부 입력]`
+- 락 키: `lock:coupon:{couponId}`
+- TTL: `2초`
+- 실패 전략: `Retry with backoff 전략`
+- 재시도 횟수: `8회`
+- 재시도 간격: `50ms`
+- 안전한 해제 방식: `UUID + Lua Script`
 
 #### 트러블슈팅 요약
-- 초기 구현에서는 `[문제 상황 입력]`
-- `[예: fetch join + 영속성 컨텍스트로 인해 최신 재고 반영 실패]`
-- 이를 `[해결 방법 입력]` 방식으로 수정하여 정합성을 확보했습니다.
+fetch join + 영속성 컨텍스트로 인해 최신 재고 반영 실패
+- 문제 상황 : `비관적 락`을 적용했음에도 불구하고 재고가 정확하게 차감되지 않는 문제 발생
+- 원인 : 락 획득 전 `fetch join` 실행으로 인해, `JPA 1차 캐시`에 캐싱된 과거 데이터가 최신 DB 데이터를 무시하고 덮어쓰는 `갱신 손실` 발생
+- 해결 : `패치조인 제거 + Lazy 로딩` 방식으로 수정하여 정합성을 확보.
 
 ---
 
@@ -275,9 +282,9 @@ limit 20;
     - 검색 조건과 정렬 조건이 함께 포함된 쿼리라 대용량 데이터에서 성능 차이를 확인하기 적합했습니다.
 
 #### Before EXPLAIN
-```sql
-1, SIMPLE, product, , ref, idx_product_category_id, idx_product_category_id, 8, const, 3571, 3.7, Using where; Using filesort
-```
+| id | select_type | table | partitions | type | possible_keys | key | key_len | ref | rows | filtered | Extra |
+|:--:|:-----------:|:-----:|:----------:|:----:|:-------------|:---|:-------:|:---:|:----:|:--------:|:------|
+| 1 | SIMPLE | product | null | ref | idx_product_category_id | idx_product_category_id | 8 | const | 3571 | 3.7 | Using where; Using filesort |
 
 #### 적용한 인덱스
 ```sql
@@ -289,9 +296,10 @@ on product (category_id, status, name);
 - `category_id`, `status`로 먼저 필터링하고, `name`으로 접두어 검색과 정렬을 함께 처리하기 위해 복합 인덱스로 구성했습니다.
 
 #### After EXPLAIN
-```sql
-1, SIMPLE, product, , range, idx_product_category_id, idx_product_category_status_name, 411, , 350, 100, Using where; Using index                                                                                                   
-```
+| id | select_type | table | partitions | type | possible_keys | key | key_len | ref | rows | filtered | Extra |
+|:--:|:-----------:|:-----:|:----------:|:----:|:-------------|:---|:-------:|:---:|:----:|:--------:|:------|
+| 1 | SIMPLE | product | null | range | idx_product_category_id, idx_product_category_status_name | idx_product_category_status_name | 411 | null | 350 | 100 | Using where; Using index |
+
 
 #### 요약
 - `type`: `ref` → `range`
