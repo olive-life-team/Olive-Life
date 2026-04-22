@@ -2,12 +2,14 @@ package com.ecommerce.chatdemo.domain.product.service;
 
 import com.ecommerce.chatdemo.domain.product.entity.Product;
 import com.ecommerce.chatdemo.domain.product.entity.request.ProductSearchRequest;
+import com.ecommerce.chatdemo.domain.product.entity.request.UpdateStockRequest;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductDetailResponse;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSearchResult;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSummaryResponse;
 import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.global.config.CaffeineCacheConfig;
 import com.ecommerce.chatdemo.global.config.RedisCacheManagerConfig;
+import com.ecommerce.chatdemo.global.config.CacheSyncSubscriberConfig;
 import com.ecommerce.chatdemo.global.config.RedisTemplateConfig;
 import com.ecommerce.chatdemo.global.exception.BusinessException;
 import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -51,6 +54,20 @@ public class ProductService {
     }
 
 
+    @Transactional
+    public void updateStock(Long productId, UpdateStockRequest request) {
+        Product product = repository.findById(productId)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        product.updateStock(request.stock());
+
+        clearRedisCache();
+        clearV4RedisCache();
+
+        redisTemplate.convertAndSend(CacheSyncSubscriberConfig.CHANNEL_NAME, "재고 업데이트 되었다. 캐시다지워라!!");
+        log.info("[Pub/Sub] 재고 변경으로 캐시 무효화 - productId: {}", productId);
+    }
+
+
     // v1
     public Page<ProductSummaryResponse> search(ProductSearchRequest request) {
         log.info("[v1] DB 조회 - keyword: {}", request.keyword());
@@ -72,9 +89,10 @@ public class ProductService {
     @CacheEvict(
             value = CaffeineCacheConfig.V2_CACHE_NAME,
             allEntries = true
-
     )
-    public void clearLocalCache() {}
+    public void clearLocalCache() {
+        log.info("[v2] 로컬 캐시가 삭제되었습니다. {allEntries = true}");
+    }
 
 
     // v3
@@ -86,6 +104,11 @@ public class ProductService {
     public ProductSearchResult searchInRedisCache(ProductSearchRequest request) {
         log.info("[v3] L2 캐시 MISS → DB 조회 - keyword: {}", request.keyword());
         return ProductSearchResult.from(repository.search(request));
+    }
+
+    @CacheEvict(value = RedisCacheManagerConfig.CACHE_NAME, allEntries = true, cacheManager = "redisCacheManager")
+    public void clearRedisCache() {
+        log.info("[v3] Reids 캐시가 삭제되었습니다.");
     }
 
 
@@ -126,5 +149,12 @@ public class ProductService {
         return result;
     }
 
+    private void clearV4RedisCache() {
+        Set<String> keys = redisTemplate.keys(RedisTemplateConfig.CACHE_NAME + "::*");
+        if (!keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            log.info("[v4] Reids 캐시가 삭제되었습니다.");
+        }
+    }
 
 }

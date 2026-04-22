@@ -1,6 +1,7 @@
 package com.ecommerce.chatdemo.domain.product.controller;
 
 import com.ecommerce.chatdemo.domain.product.entity.request.ProductSearchRequest;
+import com.ecommerce.chatdemo.domain.product.entity.request.UpdateStockRequest;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductDetailResponse;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSearchResult;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSummaryResponse;
@@ -39,6 +40,19 @@ public class ProductController {
             @PathVariable Long categoryId
     ) {
         return ResponseEntity.ok(ApiResponse.success(service.getProductsByCategory(categoryId)));
+    }
+
+
+    @RequestMapping(
+            value = "/products/{productId}/stock",
+            method = {RequestMethod.PATCH, RequestMethod.PUT}
+    )
+    public ResponseEntity<Void> updateStock(
+            @PathVariable Long productId,
+            @RequestBody UpdateStockRequest request
+    ) {
+        service.updateStock(productId, request);
+        return ResponseEntity.noContent().build();
     }
 
 
