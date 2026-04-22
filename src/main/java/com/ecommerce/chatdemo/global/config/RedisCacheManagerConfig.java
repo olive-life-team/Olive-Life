@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
@@ -18,10 +17,10 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.time.Duration;
 
 @Configuration
-public class RedisCacheConfig {
+public class RedisCacheManagerConfig {
 
 
-    public final static String CACHE_NAME = "searchCache";
+    public final static String CACHE_NAME = "redisCacheManager-searchCache";
     private static final long DURATION = 10;
     /**
      ObjectMapper : java <-> json 을 변환시켜주는 jackson 라이브러리 핵심 클래스 (Redis의 값을 저장하기 위해 필요!)

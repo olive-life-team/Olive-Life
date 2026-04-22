@@ -104,4 +104,9 @@ public class Product extends BaseEntity {
     public void increaseStock(Integer quantity) {
         this.stock += quantity;
     }
+
+    // 재고 수정
+    public void updateStock(Long stock) {
+        this.stock = stock;
+    }
 }
