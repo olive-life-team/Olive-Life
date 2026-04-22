@@ -47,7 +47,6 @@
 | 인덱스 최적화 | 병목 쿼리 선정 및 EXPLAIN 비교 | Before / After 정리 |
 | 실시간 채팅 | WebSocket + STOMP + Redis Pub/Sub | JWT 인증 포함 |
 | 배포 / CI | Docker, AWS, GitHub Actions | CI / CD 자동화 |
-| 민감 정보 관리 | GitHub Secrets, Parameter Store | [추가 예정] |
 
 ---
 
@@ -55,15 +54,15 @@
 
 | 이름  | 역할 | 담당 |
 |-----|---|---|
-| 최길중 | [역할] | [담당 기능] |
+| 최길중 | 팀장 / 인프라 | Git 초기 세팅, Docker 환경 구성, CI/CD 구축 |
 | 김소현 | [역할] | [담당 기능] |
 | 박영수 | [역할] | [담당 기능] |
 | 이승현 | [역할] | [담당 기능] |
 
 ### 📎 프로젝트 문서
-- Notion: [링크 입력]
-- API 명세서: [링크 입력]
-- 테스트 케이스: [링크 입력]
+- [프로젝트 노션](https://www.notion.so/teamsparta/3-3332dc3ef51480eb9e10eaaa7c65907f?source=copy_link)
+- [API 명세서](링크 입력)
+- [테스트 케이스](링크 입력)
 
 ---
 
@@ -261,34 +260,44 @@
 ### 3. 인덱스 최적화
 
 #### 최적화 대상 쿼리 선정
-- 대상 쿼리: `[쿼리 입력]`
-- 선정 이유: `[호출 빈도 / Full Table Scan / 정렬 비용 등 입력]`
+- 대상 쿼리:
+```sql
+select id
+from product
+where category_id = ?
+  and status = ?
+  and name like '립%'
+order by name asc
+limit 20;
+```
+
+- 선정 이유:
+    - 검색 조건과 정렬 조건이 함께 포함된 쿼리라 대용량 데이터에서 성능 차이를 확인하기 적합했습니다.
 
 #### Before EXPLAIN
 ```sql
-[Before EXPLAIN 결과 입력]
+1, SIMPLE, product, , ref, idx_product_category_id, idx_product_category_id, 8, const, 3571, 3.7, Using where; Using filesort
 ```
 
 #### 적용한 인덱스
 ```sql
-CREATE INDEX [인덱스명]
-ON [테이블명] ([컬럼1], [컬럼2], ...);
+create index idx_product_category_status_name
+on product (category_id, status, name);
 ```
 
 #### 인덱스 설계 이유
-- `[왜 이 컬럼을 선택했는지 입력]`
-- `[왜 이 순서로 복합 인덱스를 구성했는지 입력]`
+- `category_id`, `status`로 먼저 필터링하고, `name`으로 접두어 검색과 정렬을 함께 처리하기 위해 복합 인덱스로 구성했습니다.
 
 #### After EXPLAIN
 ```sql
-[After EXPLAIN 결과 입력]
+1, SIMPLE, product, , range, idx_product_category_id, idx_product_category_status_name, 411, , 350, 100, Using where; Using index                                                                                                   
 ```
 
 #### 요약
-- `type`: `[변화 입력]`
-- `key`: `[변화 입력]`
-- `rows`: `[변화 입력]`
-- `Extra`: `[Using filesort 제거 여부 등 입력]`
+- `type`: `ref` → `range`
+- `key`: `idx_product_category_id` → `idx_product_category_status_name`
+- `rows`: `3571` → `350`
+- `Extra`: `Using where; Using filesort` → `Using where; Using index`
 
 ---
 
@@ -344,7 +353,7 @@ ON [테이블명] ([컬럼1], [컬럼2], ...);
 #### 민감 정보 관리
 - GitHub Secrets: CI/CD 파이프라인용 값
 - AWS Parameter Store: 런타임 환경 변수
-- 배포용 값과 애플리케이션 실행용 값의 생명주기가 달라 분리해 관리
+- 배포할 때 필요한 값과 실제 서버 실행에 필요한 값을 분리해 관리
 
 ---
 
