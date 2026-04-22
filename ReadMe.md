@@ -275,9 +275,9 @@ limit 20;
     - 검색 조건과 정렬 조건이 함께 포함된 쿼리라 대용량 데이터에서 성능 차이를 확인하기 적합했습니다.
 
 #### Before EXPLAIN
-```sql
-1, SIMPLE, product, , ref, idx_product_category_id, idx_product_category_id, 8, const, 3571, 3.7, Using where; Using filesort
-```
+| id | select_type | table | partitions | type | possible_keys | key | key_len | ref | rows | filtered | Extra |
+|:--:|:-----------:|:-----:|:----------:|:----:|:-------------|:---|:-------:|:---:|:----:|:--------:|:------|
+| 1 | SIMPLE | product | null | ref | idx_product_category_id | idx_product_category_id | 8 | const | 3571 | 3.7 | Using where; Using filesort |
 
 #### 적용한 인덱스
 ```sql
@@ -289,9 +289,10 @@ on product (category_id, status, name);
 - `category_id`, `status`로 먼저 필터링하고, `name`으로 접두어 검색과 정렬을 함께 처리하기 위해 복합 인덱스로 구성했습니다.
 
 #### After EXPLAIN
-```sql
-1, SIMPLE, product, , range, idx_product_category_id, idx_product_category_status_name, 411, , 350, 100, Using where; Using index                                                                                                   
-```
+| id | select_type | table | partitions | type | possible_keys | key | key_len | ref | rows | filtered | Extra |
+|:--:|:-----------:|:-----:|:----------:|:----:|:-------------|:---|:-------:|:---:|:----:|:--------:|:------|
+| 1 | SIMPLE | product | null | range | idx_product_category_id, idx_product_category_status_name | idx_product_category_status_name | 411 | null | 350 | 100 | Using where; Using index |
+
 
 #### 요약
 - `type`: `ref` → `range`
