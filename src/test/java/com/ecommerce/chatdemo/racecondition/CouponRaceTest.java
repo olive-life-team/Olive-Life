@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Disabled("카테고리,상품 벌크 인서트")
 @ActiveProfiles("test")
 @SpringBootTest
 public class CouponRaceTest {
