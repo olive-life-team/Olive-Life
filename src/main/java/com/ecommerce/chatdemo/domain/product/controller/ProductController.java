@@ -44,14 +44,27 @@ public class ProductController {
 
 
     @RequestMapping(
-            value = "/products/{productId}/stock",
+            value = "/products/{productId}/stock/v2",
             method = {RequestMethod.PATCH, RequestMethod.PUT}
     )
-    public ResponseEntity<Void> updateStock(
+    public ResponseEntity<Void> updateStockV2(
             @PathVariable Long productId,
             @RequestBody UpdateStockRequest request
     ) {
-        service.updateStock(productId, request);
+        service.updateStockV2(productId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+
+    @RequestMapping(
+            value = "/products/{productId}/stock/v4",
+            method = {RequestMethod.PATCH, RequestMethod.PUT}
+    )
+    public ResponseEntity<Void> updateStockV4(
+            @PathVariable Long productId,
+            @RequestBody UpdateStockRequest request
+    ) {
+        service.updateStockV4(productId, request);
         return ResponseEntity.noContent().build();
     }
 

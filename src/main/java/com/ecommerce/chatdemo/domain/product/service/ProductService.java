@@ -54,8 +54,22 @@ public class ProductService {
     }
 
 
+    // V2 테스트용도 - 로컬캐시만 삭제
     @Transactional
-    public void updateStock(Long productId, UpdateStockRequest request) {
+    public void updateStockV2(Long productId, UpdateStockRequest request) {
+        Product product = repository.findById(productId)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
+        product.updateStock(request.stock());
+
+        clearRedisCache();
+
+        log.info("[v2] 재고 변경 - 로컬 캐시만 삭제 - productId: {}", productId);
+    }
+
+
+    // V4 테스트용도 - 로컬캐시,레디스 삭제 + pub-sub
+    @Transactional
+    public void updateStockV4(Long productId, UpdateStockRequest request) {
         Product product = repository.findById(productId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         product.updateStock(request.stock());
@@ -64,7 +78,7 @@ public class ProductService {
         clearV4RedisCache();
 
         redisTemplate.convertAndSend(CacheSyncSubscriberConfig.CHANNEL_NAME, "재고 업데이트 되었다. 캐시다지워라!!");
-        log.info("[Pub/Sub] 재고 변경으로 캐시 무효화 - productId: {}", productId);
+        log.info("[v4] 재고 변경 -  [Pub/Sub] - productId: {}", productId);
     }
 
 
