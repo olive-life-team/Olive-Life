@@ -7,25 +7,34 @@ import com.ecommerce.chatdemo.domain.product.entity.response.ProductSearchResult
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSummaryResponse;
 import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import com.ecommerce.chatdemo.global.config.CaffeineCacheConfig;
-import com.ecommerce.chatdemo.global.config.RedisCacheConfig;
+import com.ecommerce.chatdemo.global.config.RedisCacheManagerConfig;
+import com.ecommerce.chatdemo.global.config.RedisTemplateConfig;
 import com.ecommerce.chatdemo.global.exception.BusinessException;
 import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class ProductService {
 
-    private final static String CACHE_NAME = "searchCache";
     private final ProductRepository repository;
+
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final CacheManager caffeineCacheManager;
 
     public List<ProductSummaryResponse> getProductsByCategory(Long categoryId) {
         List<Product> products = repository.findByCategoryId(categoryId);
@@ -44,22 +53,24 @@ public class ProductService {
 
     // v1
     public Page<ProductSummaryResponse> search(ProductSearchRequest request) {
+        log.info("[v1] DB 조회 - keyword: {}", request.keyword());
         return repository.search(request);
     }
 
 
     // v2
     @Cacheable(
-            value = CaffeineCacheConfig.CACHE_NAME,
+            value = CaffeineCacheConfig.V2_CACHE_NAME,
             key = "#request.keyword() + ':' + #request.page() + ':' + #request.size()",
             cacheManager = "caffeineCacheManager"
     )
     public Page<ProductSummaryResponse> searchInLocalCache(ProductSearchRequest request) {
+        log.info("[v2] L1 캐시 MISS → DB 조회 - keyword: {}", request.keyword());
         return repository.search(request);
     }
 
     @CacheEvict(
-            value = CACHE_NAME,
+            value = CaffeineCacheConfig.V2_CACHE_NAME,
             allEntries = true
 
     )
@@ -68,11 +79,52 @@ public class ProductService {
 
     // v3
     @Cacheable(
-            value = RedisCacheConfig.CACHE_NAME,
+            value = RedisCacheManagerConfig.CACHE_NAME,
             key = "#request.keyword() + ':' + #request.page() + ':' + #request.size()",
             cacheManager = "redisCacheManager"
     )
     public ProductSearchResult searchInRedisCache(ProductSearchRequest request) {
+        log.info("[v3] L2 캐시 MISS → DB 조회 - keyword: {}", request.keyword());
         return ProductSearchResult.from(repository.search(request));
     }
+
+
+    // v4 (LocalCache + RedisCache + DB)
+    public ProductSearchResult searchInHybridCache(ProductSearchRequest request) {
+        String cacheKey = request.keyword() + ":" + request.page() + ":" + request.size();
+
+        // LocalCache
+        Cache caffeineCache = caffeineCacheManager.getCache(CaffeineCacheConfig.V4_CACHE_NAME);
+        if (caffeineCache != null) {
+            Cache.ValueWrapper cached = caffeineCache.get(cacheKey);
+            if (cached != null) {
+                log.info("[v4] L1 캐시 HIT - key: {}", cacheKey);
+                return (ProductSearchResult) cached.get();
+            }
+        }
+        log.info("[v4] L1 캐시 MISS - key: {}", cacheKey);
+
+        // RedisCache
+        String redisKey = RedisTemplateConfig.CACHE_NAME + "::" + cacheKey;
+        Object redisValue = redisTemplate.opsForValue().get(redisKey);
+        if (redisValue instanceof ProductSearchResult redisResult) {
+            if (caffeineCache != null) {
+                log.info("[v4] L2 캐시 HIT - key: {}", redisKey);
+                caffeineCache.put(cacheKey, redisResult);
+            }
+            return redisResult;
+        }
+        log.info("[v4] L2 캐시 MISS - key: {}", redisKey);
+
+        // DB
+        log.info("[v4] DB 조회");
+        ProductSearchResult result = ProductSearchResult.from(repository.search(request));
+        redisTemplate.opsForValue().set(redisKey, result, 10, TimeUnit.MINUTES);
+        if (caffeineCache != null) {
+            caffeineCache.put(cacheKey, result);
+        }
+        return result;
+    }
+
+
 }

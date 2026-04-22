@@ -7,7 +7,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
 @Configuration
-public class RedisConfig {
+public class RedisTemplateConfig {
+    public final static String CACHE_NAME = "redisTemplate-searchCache";
 
     @Bean
     public RedisTemplate<String, Object> RedisTemplate(RedisConnectionFactory connectionFactory) {

@@ -5,7 +5,7 @@ import com.ecommerce.chatdemo.domain.product.entity.response.ProductDetailRespon
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSearchResult;
 import com.ecommerce.chatdemo.domain.product.entity.response.ProductSummaryResponse;
 import com.ecommerce.chatdemo.domain.product.service.ProductService;
-import com.ecommerce.chatdemo.global.config.RedisCacheConfig;
+import com.ecommerce.chatdemo.global.config.CaffeineCacheConfig;
 import com.ecommerce.chatdemo.global.exception.BusinessException;
 import com.ecommerce.chatdemo.global.exception.CommonErrorCode;
 import com.ecommerce.chatdemo.global.response.ApiResponse;
@@ -85,7 +85,7 @@ public class ProductController {
 
     @GetMapping("/products/v2/search/cache/stats")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCacheStats() {
-        CaffeineCache cache = (CaffeineCache) caffeineCacheManager.getCache(RedisCacheConfig.CACHE_NAME);
+        CaffeineCache cache = (CaffeineCache) caffeineCacheManager.getCache(CaffeineCacheConfig.V2_CACHE_NAME);
         CacheStats stats = cache != null ? cache.getNativeCache().stats() : null;
 
         if (stats == null) {
@@ -125,6 +125,21 @@ public class ProductController {
 
         List<String> keywords = result != null ? result.stream().map(Object::toString).toList() : Collections.emptyList();
         return ResponseEntity.ok(ApiResponse.success(keywords));
+    }
+
+
+    // 테스트 시 v2, v3와 키가 같아 역직렬화 시 충돌이 발생해 키를 다르게 가져감
+    @GetMapping("/products/v4/search")
+    public ResponseEntity<ApiResponse<ProductSearchResult>> searchInHybridCache(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest httpRequest
+    ) {
+        incrementScore(keyword, httpRequest.getRemoteAddr());
+        return ResponseEntity.ok(ApiResponse.success(
+                service.searchInHybridCache(new ProductSearchRequest(keyword, page, size))
+        ));
     }
 
 
