@@ -22,11 +22,6 @@ public class CacheLoggingAspect {
 
     private final CacheManager caffeineCacheManager;
 
-    @Before("@annotation(org.springframework.cache.annotation.Cacheable)")
-    public void test(JoinPoint joinPoint) {
-        log.info("AOP 동작 확인 - {}", joinPoint.getSignature().getName());
-    }
-
     @Around("@annotation(cacheable)")
     public Object logCacheHit(ProceedingJoinPoint joinPoint,
                               org.springframework.cache.annotation.Cacheable cacheable) throws Throwable {
