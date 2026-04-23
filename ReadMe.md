@@ -205,28 +205,44 @@
 
 #### 왜 검색 API에 캐시를 적용했는가
 검색 API는 동일 키워드에 대한 반복 요청이 많고, 데이터 양이 증가할수록 DB 부하가 커지기 때문에 캐시 적용 효과를 가장 잘 확인할 수 있는 대상이었습니다.  
-이에 따라 성능 비교를 위해 검색 API를 다음 3단계로 분리했습니다.
+이에 따라 성능 비교를 위해 검색 API를 다음 4단계로 분리했습니다.
 
 - **v1**: DB 직접 조회
 - **v2**: Caffeine 기반 Local Cache 적용
 - **v3**: Redis 기반 Remote Cache 적용
+- **v4**: Caffeine(L1) + Redis(L2) 2단계 캐시 적용 및 Pub/Sub을 통한 인스턴스 간 캐시 동기화
 
 #### 캐시 전략
 - Cache-aside 전략 사용
-- 캐시 키: `[추가 예정]`
-- TTL: `[추가 예정]`
-- Local Cache 구현체: Caffeine
-- Scale-out 환경 대응: Redis Cache
+- 캐시 키: `{keyword}:{page}:{size}`  (예: `쿠션:0:20`)
+- TTL: Caffeine 10분, Redis 10분
+- Local Cache 구현체: Caffeine (maximumSize: 1000, LRU 정책)
+- Scale-out 환경 대응: Redis Cache + Redis Pub/Sub을 통한 인스턴스 간 로컬 캐시 동기화
+
+#### v4 2단계 캐시 동작 흐름
+
+요청  
+└─ L1(Caffeine) HIT → 즉시 반환  
+└─ L1 MISS → L2(Redis) HIT → L1 재적재 후 반환  
+└─ L2 MISS → DB 조회 → L1, L2 저장 후 반환
+
+#### 캐시 무효화 전략 (v4)
+재고·상품 정보 변경 시 아래 순서로 캐시를 무효화합니다.
+1. Redis(L2) 캐시 삭제
+2. Redis Pub/Sub 채널에 무효화 메시지 발행
+3. 모든 인스턴스의 `CacheSyncMessageListener`가 메시지 수신 후 각자의 Caffeine(L1) 캐시 삭제
 
 #### 인기 검색어
-- 자료구조: `[추가 예정]`
-- 집계 기준: `[추가 예정]`
-- 중복 카운팅 방지 전략: `[추가 예정]`
+- 자료구조: Redis Sorted Set (ZSet) - 키워드별 점수(score)로 순위 관리
+- 집계 기준: 일별 집계 (키: `popular:keywords:{날짜}`, TTL 7일)
+- 중복 카운팅 방지 전략: IP 기반 중복 방지 (`search:dedup:{ip}:{keyword}:{날짜}`, TTL 1일) - 동일 IP의 동일 키워드는 하루 1회만 카운팅
 
 #### 선택 이유
-- Local Cache는 단일 서버 환경에서 빠른 응답을 제공할 수 있습니다.
-- 그러나 다중 서버 환경에서는 캐시 공유가 불가능하므로, 공용 캐시 저장소가 필요했습니다.
-- 이를 해결하기 위해 Redis 기반 Remote Cache로 확장했습니다.
+- Local Cache(Caffeine)는 네트워크 비용 없이 JVM 메모리에서 바로 응답하므로 가장 빠릅니다.
+- 그러나 다중 서버 환경에서는 인스턴스마다 캐시가 따로 존재하여 데이터 불일치가 발생할 수 있습니다.
+- Redis(Remote Cache)는 모든 인스턴스가 공유하므로 일관성을 보장하지만, 네트워크 비용이 발생합니다.
+- v4는 두 방식을 결합하여 빠른 응답(L1)과 일관성(L2 + Pub/Sub)을 동시에 확보했습니다.
+
 
 ---
 
