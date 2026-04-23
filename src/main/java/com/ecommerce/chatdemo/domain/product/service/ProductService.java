@@ -156,7 +156,7 @@ public class ProductService {
         // DB
         log.info("[v4] DB 조회");
         ProductSearchResult result = ProductSearchResult.from(repository.search(request));
-        redisTemplate.opsForValue().set(redisKey, result, 10, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(redisKey, result, RedisTemplateConfig.DURATION, TimeUnit.MINUTES);
         if (caffeineCache != null) {
             caffeineCache.put(cacheKey, result);
         }
