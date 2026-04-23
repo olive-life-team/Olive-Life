@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 @RequiredArgsConstructor
-@Order(1)   //@Cacheable의 CacheInterceptor가 캐시 HIT이면 메서드 체인을 조기 종료가 되버려 order 지정이 반드시 필요!
+@Order(1)   //@Cacheable의 CacheInterceptor가  캐시 HIT이면 메서드 체인을 조기 종료가 되버려 order 지정이 반드시 필요!
 public class CacheLoggingAspect {
 
     private final CacheManager caffeineCacheManager;
