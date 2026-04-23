@@ -2,11 +2,13 @@ package com.ecommerce.chatdemo;
 
 import com.ecommerce.chatdemo.domain.coupon.entity.CouponStatus;
 import com.ecommerce.chatdemo.domain.member.entity.MemberRole;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -15,6 +17,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Disabled("주문 동시성 테스트")
+@ActiveProfiles("test")
 @SpringBootTest
 class CouponAndMemberDummyDataInsertTest {
 

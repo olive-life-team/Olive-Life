@@ -1,5 +1,6 @@
 package com.ecommerce.chatdemo;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,8 +14,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
+@Disabled("쿠폰 동시성 테스트")
+@ActiveProfiles("test")
 @SpringBootTest
-//@ActiveProfiles("test")
 class ProductBulkInsertAndIndexBenchmarkTest {
 
     // SQL 실행과 배치 insert에 사용

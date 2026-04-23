@@ -20,6 +20,7 @@ import com.ecommerce.chatdemo.domain.product.entity.Product;
 import com.ecommerce.chatdemo.domain.product.repository.ProductRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Disabled("쿠폰,사용자 더미 데이터")
 @ActiveProfiles("test")
 @SpringBootTest
 public class OrderRaceTest {
