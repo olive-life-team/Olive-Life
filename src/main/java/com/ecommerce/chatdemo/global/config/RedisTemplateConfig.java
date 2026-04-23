@@ -9,6 +9,7 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 @Configuration
 public class RedisTemplateConfig {
     public final static String CACHE_NAME = "redisTemplate-searchCache";
+    public static final long DURATION = 10;
 
     @Bean
     public RedisTemplate<String, Object> RedisTemplate(RedisConnectionFactory connectionFactory) {
