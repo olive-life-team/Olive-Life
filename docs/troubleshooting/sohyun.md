@@ -1,14 +1,14 @@
 
 # 🚨 Troubleshooting: 검색 API 성능 장애 개선 및 캐싱 전략 도입
 
-상품 검색 API 부하 테스트 중 발생한 **시스템 마비 현상(Request Timeout)**을 분석하고, **단계별 캐싱 전략(Local & Redis)**을 적용하여 성능을 104배 개선하고 시스템 가용성을 100% 확보한 과정
+상품 검색 API 부하 테스트 중 발생한 **시스템 마비 현상(Request Timeout)**을 분석하고, **단계별 캐싱 전략(Local & Redis)**을 적용하여 성능을 개선하고 시스템 가용성을 100% 확보한 과정
 
 ---
 
 ## 1. 🔎 배경 및 테스트 설계
 * **목적**: 상품 검색 API의 병목 지점을 파악하고, 분산 환경(Scale-out)에 적합한 최적의 캐시 아키텍처 결정
 * **테스트 도구**: K6, Docker, InfluxDB, Grafana
-* **부하 모델**: 150 VUs까지 점진적 부하 증가(Ramp-up) 후 Peak Load 유지
+* **부하 모델**: 150 VUs까지 점진적 부하 증가(Ramp-up)
 
 ### 테스트 시나리오 (Step-by-Step)
 1.  **v1 (No Cache)**: 모든 요청이 DB(`MySQL`)를 직접 조회
