@@ -61,8 +61,8 @@ public class ProductService {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.NOT_FOUND));
         product.updateStock(request.stock());
 
-        clearRedisCache();
-
+        Cache v2Cache = caffeineCacheManager.getCache(CaffeineCacheConfig.V2_CACHE_NAME);
+        if (v2Cache != null) v2Cache.clear();
         log.info("[v2] 재고 변경 - 로컬 캐시만 삭제 - productId: {}", productId);
     }
 
