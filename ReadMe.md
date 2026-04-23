@@ -214,7 +214,7 @@
 
 #### 캐시 전략
 - Cache-aside 전략 사용
-- 캐시 키: `{keyword}:{page}:{size}` (예: `쿠션:0:20`)
+- 캐시 키: `{keyword}:{page}:{size}`  (예: `쿠션:0:20`)
 - TTL: Caffeine 10분, Redis 10분
 - Local Cache 구현체: Caffeine (maximumSize: 1000, LRU 정책)
 - Scale-out 환경 대응: Redis Cache + Redis Pub/Sub을 통한 인스턴스 간 로컬 캐시 동기화
