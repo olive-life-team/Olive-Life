@@ -59,12 +59,12 @@
 | 이승현 | 동시성     | 장바구니, 주문, 쿠폰, 동시성 테스트                      |
 
 ### 📎 프로젝트 문서
-- [프로젝트 노션](https://www.notion.so/teamsparta/3-3332dc3ef51480eb9e10eaaa7c65907f?source=copy_link)
-- [API 명세서](링크 입력)
-- [테스트 케이스](링크 입력)
-- 동시성 테스트 시나리오: https://www.notion.so/teamsparta/34a2dc3ef51480f68a06e1a93ec6949b?source=copy_link
-- 부하 테스트 시나리오: https://www.notion.so/teamsparta/K6-3452dc3ef51480c2969ef5a57686466a
-
+- [프로젝트 팀 노션](https://www.notion.so/teamsparta/3-3332dc3ef51480eb9e10eaaa7c65907f?source=copy_link)
+- [테스트 케이스](https://www.notion.so/teamsparta/33e2dc3ef51480f8ae75c220dfcc341d?source=copy_link)
+- [동시성 테스트 시나리오](https://www.notion.so/teamsparta/34a2dc3ef51480f68a06e1a93ec6949b?source=copy_link)
+- [부하 테스트 시나리오](https://www.notion.so/teamsparta/K6-3452dc3ef51480c2969ef5a57686466a)
+- [멀티인스턴스 캐시 테스트 시나리오](https://www.notion.so/teamsparta/34a2dc3ef514802da370f71d0e48ac55?source=copy_link)
+- [대용량 데이터 환경에서 인덱스 효과 검증](https://www.notion.so/teamsparta/3442dc3ef51480b28015fb9ef521f0cd?source=copy_link)
 ---
 
 ## ⏲️ 개발 기간
@@ -415,15 +415,19 @@ create index idx_product_category_status_name
 
 ## 🖼 API 명세서
 
-- Notion: [링크 입력]
-
-대표 API는 아래 문서에서 확인할 수 있습니다.
+<p align="center">
+  <img src="docs/images/API.png" width="80%">
+</p>
 
 ---
 
 ## 🗒 Test Case
 
-- 테스트 케이스 문서: [링크 입력]
+<p align="center">
+  <img src="docs/images/testcase.png" width="80%">
+</p>
+
+- [테스트 케이스 링크](https://www.notion.so/teamsparta/33e2dc3ef51480f8ae75c220dfcc341d?source=copy_link)
 
 ---
 
