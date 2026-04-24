@@ -39,16 +39,14 @@
 
 ## ✅ 요구사항 반영 요약
 
-| 구분 | 구현 내용                            | 비고                                               |
-|---|----------------------------------|--------------------------------------------------|
-| 동시성 제어 | 낙관적 락, 비관적 락, MySQL 락, Redis 분산락 | 성능비교                                             |
-| 캐싱 | 검색 API v1 / v2 / v3 구성           | v1: DB 직접 조회 / v2: Local Cache / v3: Redis Cache |
-| 인기 검색어 | Redis ZSet 기반 실시간 인기 검색어 집계      | 일별 집계 / IP 기반 중복 카운팅 방지
-|
-| 인덱스 최적화 | 병목 쿼리 선정 및 EXPLAIN 비교            | Before / After 정리                                |
-| 실시간 채팅 | WebSocket + STOMP + Redis Pub/Sub | JWT 인증 포함                                        |
-| 배포 / CI | Docker, AWS, GitHub Actions      | CI / CD 자동화                                      |
-
+| 구분 | 구현 내용 | 비고 |
+|---|---|---|
+| 동시성 제어 | 낙관적 락, 비관적 락, MySQL 락, Redis 분산락 | 성능비교 |
+| 캐싱 | 검색 API v1 / v2 / v3 / v4 구성 | v1: DB 직접 조회 / v2: Local Cache / v3: Redis Cache / v4: 2단계 캐시 + Pub/Sub |
+| 인기 검색어 | Redis ZSet 기반 실시간 인기 검색어 집계 | 일별 집계 / IP 기반 중복 카운팅 방지 |
+| 인덱스 최적화 | 병목 쿼리 선정 및 EXPLAIN 비교 | Before / After 정리 |
+| 실시간 채팅 | WebSocket + STOMP + Redis Pub/Sub | JWT 인증 포함 |
+| 배포 / CI | Docker, AWS, GitHub Actions | CI / CD 자동화 |
 ---
 
 ## 👥 팀 소개
