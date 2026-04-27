@@ -52,16 +52,22 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.7'
 
     /*
-     * JPA + MySQL 영속성 처리용
+     * JPA + MySQL 영속성 처리용 + test코드 h2로 실행(CI는 h2 사용)
      */
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.mysql:mysql-connector-j'
+    testRuntimeOnly 'com.h2database:h2'
 
     /*
      * Redis 사용용
      */
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.apache.commons:commons-pool2'
+
+    /*
+     * Redisson 사용용
+     */
+    implementation 'org.redisson:redisson-spring-boot-starter:3.27.2'
 
     /*
      * 캐시 기능용
@@ -95,6 +101,12 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter'
+
+    // Validation 의존성 추가
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // aop
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
 }
 
 tasks.named('test') {

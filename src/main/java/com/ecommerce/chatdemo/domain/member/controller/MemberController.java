@@ -36,6 +36,14 @@ public class MemberController {
         return ResponseEntity.ok(ApiResponse.success(memberService.getMyInfo(loginUserInfo.id())));
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<String>> logout(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        memberService.logout(authorizationHeader);
+        return ResponseEntity.ok(ApiResponse.success("로그아웃이 완료되었습니다."));
+    }
+
     /**
      * RBAC 테스트 코드 --> API 명세서 작성은 노노노
      * */

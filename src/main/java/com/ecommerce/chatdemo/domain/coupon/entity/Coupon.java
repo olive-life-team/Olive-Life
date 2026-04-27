@@ -1,5 +1,7 @@
 package com.ecommerce.chatdemo.domain.coupon.entity;
 
+import com.ecommerce.chatdemo.domain.coupon.exception.CouponErrorCode;
+import com.ecommerce.chatdemo.domain.coupon.exception.CouponException;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -23,8 +25,8 @@ public class Coupon extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(name = "discount_value", nullable = false, precision = 15, scale = 0)
-    private BigDecimal discountValue;
+    @Column(nullable = false)
+    private Long discountAmount;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -45,10 +47,14 @@ public class Coupon extends BaseEntity {
     @Column(name = "use_end_at", nullable = false)
     private LocalDateTime useEndAt;
 
+    // 낙관 락 테스트 시 주석 해제
+//    @Version
+//    private Long version;
+
     @Builder
     private Coupon(
             String name,
-            BigDecimal discountValue,
+            Long discountAmount,
             Integer quantity,
             CouponStatus status,
             LocalDateTime issueStartAt,
@@ -57,7 +63,7 @@ public class Coupon extends BaseEntity {
             LocalDateTime useEndAt
     ) {
         this.name = name;
-        this.discountValue = discountValue;
+        this.discountAmount = discountAmount;
         this.quantity = quantity;
         this.status = status;
         this.issueStartAt = issueStartAt;
@@ -68,7 +74,7 @@ public class Coupon extends BaseEntity {
 
     public static Coupon create(
             String name,
-            BigDecimal discountValue,
+            Long discountAmount,
             Integer quantity,
             CouponStatus status,
             LocalDateTime issueStartAt,
@@ -76,9 +82,17 @@ public class Coupon extends BaseEntity {
             LocalDateTime useStartAt,
             LocalDateTime useEndAt
     ) {
+        // 발급일이 발급종료일보다 늦으면 예외
+        if (issueStartAt.isAfter(issueEndAt)) {
+            throw new CouponException(CouponErrorCode.INVALID_ISSUE_DATE);
+        }
+        // 사용가능 시작일이 만료일보다 늦으면 예외
+        if (useStartAt.isAfter(useEndAt)) {
+            throw new CouponException(CouponErrorCode.INVALID_USE_DATE);
+        }
         return Coupon.builder()
                 .name(name)
-                .discountValue(discountValue)
+                .discountAmount(discountAmount)
                 .quantity(quantity)
                 .status(status)
                 .issueStartAt(issueStartAt)
@@ -86,5 +100,13 @@ public class Coupon extends BaseEntity {
                 .useStartAt(useStartAt)
                 .useEndAt(useEndAt)
                 .build();
+    }
+
+    // TODO: 동시성 문제
+    public void decreaseCouponQuantity() {
+        if (this.quantity <= 0) {
+            throw new CouponException(CouponErrorCode.COUPON_OUT_OF_STOCK);
+        }
+        this.quantity--;
     }
 }

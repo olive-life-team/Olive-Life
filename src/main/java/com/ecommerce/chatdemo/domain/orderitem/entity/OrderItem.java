@@ -9,7 +9,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 
 @Getter
 @Entity
@@ -32,8 +31,8 @@ public class OrderItem extends BaseEntity {
     @Column(name = "product_name", nullable = false, length = 100)
     private String productName;
 
-    @Column(name = "product_price", nullable = false, precision = 15, scale = 0)
-    private BigDecimal productPrice;
+    @Column(name = "product_price", nullable = false)
+    private Long productPrice;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -43,7 +42,7 @@ public class OrderItem extends BaseEntity {
             Order order,
             Product product,
             String productName,
-            BigDecimal productPrice,
+            Long productPrice,
             Integer quantity
     ) {
         this.order = order;

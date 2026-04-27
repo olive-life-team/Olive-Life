@@ -1,15 +1,15 @@
 package com.ecommerce.chatdemo.domain.cartitem.entity;
 
 import com.ecommerce.chatdemo.domain.cart.entity.Cart;
+import com.ecommerce.chatdemo.domain.cartitem.exception.CartItemErrorCode;
 import com.ecommerce.chatdemo.domain.product.entity.Product;
 import com.ecommerce.chatdemo.global.entity.BaseEntity;
+import com.ecommerce.chatdemo.global.exception.BusinessException;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
 
 @Getter
 @Entity
@@ -29,12 +29,6 @@ public class CartItem extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Product product;
 
-    @Column(name = "product_name", nullable = false, length = 100)
-    private String productName;
-
-    @Column(name = "product_price", nullable = false, precision = 15, scale = 0)
-    private BigDecimal productPrice;
-
     @Column(nullable = false)
     private Integer quantity;
 
@@ -42,14 +36,10 @@ public class CartItem extends BaseEntity {
     private CartItem(
             Cart cart,
             Product product,
-            String productName,
-            BigDecimal productPrice,
             Integer quantity
     ) {
         this.cart = cart;
         this.product = product;
-        this.productName = productName;
-        this.productPrice = productPrice;
         this.quantity = quantity;
     }
 
@@ -57,9 +47,20 @@ public class CartItem extends BaseEntity {
         return CartItem.builder()
                 .cart(cart)
                 .product(product)
-                .productName(product.getName())
-                .productPrice(product.getPrice())
                 .quantity(quantity)
                 .build();
+    }
+
+    // 이미 담긴 상품 또 담았을 경우 수량만 증가
+    public void addQuantity(Integer addQuantity) {
+        this.quantity += addQuantity;
+    }
+
+    // 장바구니 수량 수정
+    public void updateQuantity(Integer newQuantity) {
+        if (newQuantity <= 0) {
+            throw new BusinessException(CartItemErrorCode.INVALID_QUANTITY);
+        }
+        this.quantity = newQuantity;
     }
 }
